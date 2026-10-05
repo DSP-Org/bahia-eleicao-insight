@@ -8,6 +8,7 @@ import { salvarPlanejamento, excluirPlanejamento } from "@/lib/planejamento.func
 import { BuscaItem } from "@/components/relatorios/BuscaItem";
 import { MapaBA } from "@/components/MapaBA";
 import { PageHead, Card, Loading, Select, Btn, Stat } from "@/components/ui-bits";
+import type { Bloco, Coluna } from "@/lib/relatorios/blocos";
 
 export const Route = createFileRoute("/meta-x-urna")({
   head: () => ({
@@ -194,6 +195,8 @@ function Analise({ plano }: { plano: Plano }) {
   const qc = useQueryClient();
   const excluir = useServerFn(excluirPlanejamento);
   const [filtro, setFiltro] = useState<Status | "">("");
+  const [gerando, setGerando] = useState(false);
+  const [erroPdf, setErroPdf] = useState("");
   const [sel, setSel] = useState<string>();
   const cargo = meta?.cargos.find((c) => c.slug === plano.cargo);
   const idx = cargo?.candidatos.findIndex((c) => c.id === plano.candidato_id) ?? -1;
@@ -255,10 +258,41 @@ function Analise({ plano }: { plano: Plano }) {
       </div>
 
       <Card title={filtro ? STATUS[filtro].nome : "Todos os municípios com meta ou votos"} action={
+        <div className="flex flex-wrap gap-2">
+        <Btn disabled={gerando} onClick={async () => {
+          setGerando(true); setErroPdf("");
+          try {
+            const { baixarRelatorioPDF } = await import("@/lib/report-pdf-blocos");
+            const grupos = (filtro ? [filtro] : (["superou", "abaixo", "zerado", "sem_meta"] as Status[]).filter((s) => cont(s) > 0));
+            const colunas: Coluna[] = [
+              { titulo: "Município", tipo: "mun" }, { titulo: "Região", tipo: "texto" }, { titulo: "Meta", tipo: "int" },
+              { titulo: "Votos", tipo: "int" }, { titulo: "Diferença", tipo: "dif" }, { titulo: "% da meta", tipo: "pct", casas: 1 },
+            ];
+            const blocos: Bloco[] = [
+              { tipo: "destaque", kicker: `${cargo.nome} · planejamento "${plano.nome}"`, titulo: plano.candidato_nome, sub: `Planejamento enviado em ${new Date(plano.criado_em).toLocaleString("pt-BR")}` },
+              { tipo: "numeros", itens: [
+                { rotulo: "Meta total", valor: nf(tMeta), sub: `${cont("superou") + cont("abaixo") + cont("zerado")} municípios com meta` },
+                { rotulo: "Votos onde havia meta", valor: nf(tVotos), sub: `${pf(pct(tVotos, tMeta), 1)} da meta` },
+                { rotulo: "Saldo", valor: `${tVotos - tMeta >= 0 ? "+" : ""}${nf(tVotos - tMeta)}`, sub: tVotos >= tMeta ? "acima do planejado" : "abaixo do planejado" },
+                { rotulo: "Votos sem planejamento", valor: nf(extra), sub: `${cont("sem_meta")} municípios` },
+              ] },
+              { tipo: "numeros", itens: (["superou", "abaixo", "zerado", "sem_meta"] as Status[]).map((s) => ({ rotulo: STATUS[s].nome, valor: `${cont(s)} municípios` })) },
+              ...grupos.map((s): Bloco => ({
+                tipo: "tabela", titulo: `${STATUS[s].nome} (${cont(s)})`, colunas, arquivo: "",
+                linhas: rows.filter((r) => r.st === s).sort((a, b) => (s === "superou" || s === "sem_meta" ? b.dif - a.dif : a.dif - b.dif))
+                  .map((r) => [{ nome: r.m.nome, tse: r.m.tse }, r.m.ri, r.meta, r.votos, r.dif, r.meta ? r.ating : null]),
+              })),
+            ];
+            await baixarRelatorioPDF({ titulo: `Meta x Urna — ${plano.nome}`, grupo: "Planejamento x resultado", filtros: `${plano.candidato_nome} · ${cargo.nome}${filtro ? ` · ${STATUS[filtro].nome}` : ""}`, blocos });
+          } catch (e) { setErroPdf(e instanceof Error ? e.message : "Falha ao gerar o PDF."); }
+          finally { setGerando(false); }
+        }}>{gerando ? "Gerando PDF…" : "Baixar PDF"}</Btn>
         <Btn onClick={() => downloadCSV(`meta-x-urna-${slugify(plano.nome).replace(/\W+/g, "-")}.csv`, [
           ["Município", "Região", "Meta", "Votos", "Diferença", "% da meta", "Situação"],
           ...lista.map((r) => [r.m.nome, r.m.ri, r.meta, r.votos, r.dif, r.meta ? r.ating.toFixed(1).replace(".", ",") : "", STATUS[r.st].nome]),
-        ])}>Baixar CSV</Btn>}>
+        ])}>Baixar CSV</Btn>
+        {erroPdf && <span className="text-sm text-destructive">{erroPdf}</span>}
+        </div>}>
         <div className="max-h-[560px] overflow-auto">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-card text-left text-muted-foreground"><tr>
