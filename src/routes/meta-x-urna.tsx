@@ -79,7 +79,13 @@ function lerNumero(v: unknown) {
 
 async function lerPlanilha(file: File, muns: Municipio[]) {
   const XLSX = await import("xlsx");
-  const wb = XLSX.read(await file.arrayBuffer(), { type: "array" });
+  const buf = await file.arrayBuffer();
+  let wb;
+  if (/\.csv$/i.test(file.name)) {
+    let txt = new TextDecoder("utf-8").decode(buf);
+    if (txt.includes("\uFFFD")) txt = new TextDecoder("windows-1252").decode(buf);
+    wb = XLSX.read(txt.replace(/^\uFEFF/, ""), { type: "string" });
+  } else wb = XLSX.read(buf, { type: "array" });
   const linhas = XLSX.utils.sheet_to_json<unknown[]>(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: "" });
   const cab = (linhas[0] ?? []).map((c) => slugify(String(c)));
   const iCod = cab.findIndex((c) => /cod|ibge|tse/.test(c));
