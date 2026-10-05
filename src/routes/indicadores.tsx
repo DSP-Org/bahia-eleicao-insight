@@ -118,7 +118,7 @@ function Indicadores() {
         </label>
         <div className="grid min-w-0 gap-1.5">
           <p className="text-xs font-semibold text-muted-foreground">Recorte</p>
-          <BuscaItem itens={recortes} busca={(i) => slugify(`${i.nome} ${i.grupo}`)} render={(i) => <span><b>{i.nome}</b>{i.grupo && <span className="text-muted-foreground"> · {i.grupo}</span>}</span>} onEscolher={(i) => setRecorte(i.v)} placeholder="Região, território ou município…" rotulo="Buscar recorte dos indicadores" selecionado={recorteAtual} chip={(i) => <span>{i.nome}{i.grupo && <span className="text-muted-foreground"> · {i.grupo}</span>}</span>} onLimpar={recorte !== "ba" ? () => setRecorte("ba") : undefined} rotuloLimpar="Voltar para Bahia inteira" />
+          <BuscaItem itens={recortes} busca={(i) => slugify(`${i.nome} ${i.grupo}`)} render={(i) => <span><b>{i.nome}</b>{i.grupo && <span className="text-muted-foreground"> · {i.grupo}</span>}</span>} onEscolher={(i) => setRecorte(i.v)} placeholder="Região, território ou município…" rotulo="Buscar recorte dos indicadores" selecionado={recorteAtual} chip={(i) => <span>{i.nome}{i.grupo && <span className="text-muted-foreground"> · {i.grupo}</span>}</span>} {...(recorte !== "ba" ? { onLimpar: () => setRecorte("ba") } : {})} rotuloLimpar="Voltar para Bahia inteira" />
         </div>
         {mostraCandidato && <div className="grid min-w-0 gap-1.5">
           <p className="text-xs font-semibold text-muted-foreground">Candidato do raio-x</p>
