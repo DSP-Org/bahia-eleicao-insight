@@ -49,7 +49,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Eleições 2026 Bahia — Painel de resultados" },
+      { title: "Data Analytics — Eleições 2026 na Bahia" },
       { name: "description", content: "Resultados oficiais do TSE das Eleições 2026 na Bahia: mapas, relatórios e comparativos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -96,8 +96,8 @@ function RootComponent() {
       <div className="min-h-screen">
         <header className="border-b border-border bg-card">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <Link to="/" className="font-display text-2xl font-black tracking-tight">
-              Bahia<span className="text-primary">·</span>2026
+            <Link to="/" className="font-display text-2xl font-black">
+              Data Analytics<span className="text-primary">·</span>
             </Link>
             <nav className="flex flex-wrap gap-1 text-sm">
               {NAV.map((n) => (
@@ -116,7 +116,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
-          Fonte: Tribunal Superior Eleitoral (resultados.tse.jus.br) · 1º turno, 04/10/2026 · Malha municipal: IBGE
+          Data Analytics · Fonte: Tribunal Superior Eleitoral (resultados.tse.jus.br) · 1º turno, 04/10/2026 · Malha municipal: IBGE
         </footer>
       </div>
     </QueryClientProvider>

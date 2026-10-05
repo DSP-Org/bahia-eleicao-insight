@@ -65,6 +65,12 @@
 }
 
 :root {
+  --report-ink: #20262c;
+  --report-muted: #59636d;
+  --report-accent: #bd303c;
+  --report-surface: #f2f4f6;
+  --report-line: #d6dce1;
+  --report-paper: #ffffff;
   --radius: 0.375rem;
   --background: oklch(0.975 0.012 85);
   --foreground: oklch(0.2 0.02 60);
