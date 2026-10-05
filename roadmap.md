@@ -1,4 +1,4 @@
 # Tasks
-- [ ] Apply Data Analytics branding.
-- [ ] Add polished PDF export for the filtered reports.
-- [ ] Verify downloaded PDF pages visually and report export end-to-end.
+- [x] Apply Data Analytics branding.
+- [x] Add polished PDF export for the filtered reports.
+- [x] Verify downloaded PDF pages visually and report export end-to-end.
