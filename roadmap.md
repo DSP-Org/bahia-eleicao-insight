@@ -5,3 +5,5 @@
 - [x] Adapt all pages and wide tables for phones.
 - [x] Verify mobile navigation, searches, reports and desktop tables.
 - [x] Add same-office and cross-office comparison tabs with improved candidate cards.
+- [ ] Create a mobile-first Indicadores page with simple cards derived from election results.
+- [ ] Verify indicator calculations, cargo/candidate filters and phone layouts.
