@@ -150,7 +150,7 @@ function Envio({ onSalvo }: { onSalvo: (id: string) => void }) {
         </label>
         <div className="grid gap-1 text-sm">Candidato
           {cand ? (
-            <div className="flex items-center justify-between rounded-md border border-input bg-background px-3 py-2">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-input bg-background px-3 py-2">
               <span>{cand.nome} · {cand.partido} {cand.n}</span>
               <button aria-label="Trocar candidato" onClick={() => setCandId("")} className="px-1 text-muted-foreground hover:text-foreground">×</button>
             </div>
@@ -162,7 +162,7 @@ function Envio({ onSalvo }: { onSalvo: (id: string) => void }) {
           )}
         </div>
         <label className="grid gap-1 text-sm">Planilha (Excel ou CSV)
-          <input type="file" accept=".xlsx,.xls,.csv" className="text-sm" onChange={async (e) => {
+          <input type="file" accept=".xlsx,.xls,.csv" className="w-full min-w-0 text-sm" onChange={async (e) => {
             const f = e.target.files?.[0]; if (!f) return; setErro("");
             try { setLido({ ...(await lerPlanilha(f, muns)), arquivo: f.name }); } catch (er) { setLido(null); setErro(er instanceof Error ? er.message : "Não consegui ler a planilha."); }
           }} />
@@ -294,19 +294,19 @@ function Analise({ plano }: { plano: Plano }) {
         {erroPdf && <span className="text-sm text-destructive">{erroPdf}</span>}
         </div>}>
         <div className="max-h-[560px] overflow-auto">
-          <table className="w-full text-sm">
+          <table className="mobile-records w-full text-sm">
             <thead className="sticky top-0 bg-card text-left text-muted-foreground"><tr>
               <th className="py-2">Município</th><th className="text-right">Meta</th><th className="text-right">Votos</th><th className="text-right">Diferença</th><th className="text-right">% meta</th><th className="pl-3">Situação</th>
             </tr></thead>
             <tbody>
               {lista.map((r) => (
                 <tr key={r.m.tse} className="cursor-pointer border-t border-border hover:bg-accent" onClick={() => setSel(r.m.ibge)}>
-                  <td className="py-1.5">{r.m.nome}</td>
-                  <td className="text-right font-mono">{nf(r.meta)}</td>
-                  <td className="text-right font-mono">{nf(r.votos)}</td>
-                  <td className="text-right font-mono" style={{ color: r.dif >= 0 ? STATUS.superou.cor : STATUS.abaixo.cor }}>{r.dif >= 0 ? "+" : ""}{nf(r.dif)}</td>
-                  <td className="text-right font-mono">{r.meta ? pf(r.ating, 1) : "—"}</td>
-                  <td className="pl-3"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: STATUS[r.st].cor }} /> {STATUS[r.st].nome}</td>
+                  <td data-label="Município" className="record-title py-1.5">{r.m.nome}</td>
+                  <td data-label="Meta" className="text-right font-mono">{nf(r.meta)}</td>
+                  <td data-label="Votos" className="text-right font-mono">{nf(r.votos)}</td>
+                  <td data-label="Diferença" className="text-right font-mono" style={{ color: r.dif >= 0 ? STATUS.superou.cor : STATUS.abaixo.cor }}>{r.dif >= 0 ? "+" : ""}{nf(r.dif)}</td>
+                  <td data-label="% da meta" className="text-right font-mono">{r.meta ? pf(r.ating, 1) : "—"}</td>
+                  <td data-label="Situação" className="record-title pl-3"><span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: STATUS[r.st].cor }} /> {STATUS[r.st].nome}</td>
                 </tr>
               ))}
             </tbody>

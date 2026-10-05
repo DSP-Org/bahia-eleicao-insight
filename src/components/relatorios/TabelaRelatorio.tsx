@@ -34,7 +34,7 @@ function CelulaView({ c, col, max }: { c: Celula; col: Coluna; max: number }) {
   if (c != null && typeof c === "object") {
     if ("id" in c) {
       return (
-        <div className="min-w-36">
+        <div className="min-w-0 sm:min-w-36">
           <Link to="/candidato/$id" params={{ id: c.id }} className="font-medium hover:underline">
             {c.nome}
           </Link>
@@ -128,7 +128,30 @@ export function TabelaRelatorio({ t }: { t: BlocoTabela }) {
           <Btn onClick={baixar}>CSV</Btn>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="mb-3 flex items-center gap-2 sm:hidden">
+        <label htmlFor={`ordem-${t.arquivo}`} className="shrink-0 text-xs text-muted-foreground">Ordenar por</label>
+        <select id={`ordem-${t.arquivo}`} value={ordem?.[0] ?? ""} onChange={(e) => ordenarPor(Number(e.target.value))} className="min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-2 text-sm">
+          <option value="" disabled>Ordem original</option>
+          {t.colunas.map((c, i) => <option key={i} value={i}>{c.titulo}</option>)}
+        </select>
+        {ordem && <Btn onClick={() => setOrdem([ordem[0], !ordem[1]])}>{ordem[1] ? "↓" : "↑"}</Btn>}
+      </div>
+      <div className="grid gap-3 sm:hidden">
+        {visiveis.map((r, k) => (
+          <article key={k} className="min-w-0 rounded-md border border-border p-3">
+            <dl className="grid grid-cols-2 gap-3 text-sm">
+              {t.colunas.map((c, i) => (
+                <div key={i} className={`min-w-0 break-words ${i === 0 || c.tipo === "cand" || c.tipo === "mun" ? "col-span-2" : ""}`}>
+                  <dt className="mb-1 text-xs text-muted-foreground">{c.titulo}</dt>
+                  <dd className={NUMERICO.has(c.tipo) ? "font-mono" : "font-medium"}><CelulaView c={r[i] ?? null} col={c} max={maximos[i] ?? 0} /></dd>
+                </div>
+              ))}
+            </dl>
+          </article>
+        ))}
+        {!visiveis.length && <p className="py-6 text-center text-muted-foreground">Nenhum resultado.</p>}
+      </div>
+      <div className="hidden overflow-x-auto sm:block">
         <table className="w-full text-sm">
           <thead className="text-left text-xs uppercase text-muted-foreground">
             <tr>
