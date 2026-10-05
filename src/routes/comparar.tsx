@@ -56,21 +56,18 @@ function Comparar() {
           <div key={k} className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1 md:flex-none">
             <span className="inline-block h-3 w-3 shrink-0 rounded-sm" style={{ background: SERIES[k] }} />
             <div className="min-w-0 flex-1 sm:w-56">
-              {sel[k] && cargo.candidatos.some((c) => c.id === sel[k]) ? (
-                <div className="flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  <span className="truncate font-medium">{cargo.candidatos.find((c) => c.id === sel[k])?.nome}</span>
-                  <button aria-label="Trocar candidato" onClick={() => setAt(k, "")} className="text-muted-foreground hover:text-foreground">×</button>
-                </div>
-              ) : (
-                <BuscaItem
-                  itens={cargo.candidatos}
-                  busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)}
-                  placeholder={k < 2 ? "Digite para buscar…" : "+ adicionar"}
-                  rotulo={`Candidato ${k + 1}`}
-                  render={(c) => <span>{c.nome} <span className="text-muted-foreground">({c.partido})</span></span>}
-                  onEscolher={(c) => setAt(k, c.id)}
-                />
-              )}
+              <BuscaItem
+                itens={cargo.candidatos}
+                busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)}
+                placeholder={k < 2 ? "Digite para buscar…" : "+ adicionar"}
+                rotulo={`Candidato ${k + 1}`}
+                render={(c) => <span>{c.nome} <span className="text-muted-foreground">({c.partido})</span></span>}
+                selecionado={cargo.candidatos.find((c) => c.id === sel[k]) ?? null}
+                onLimpar={() => setAt(k, "")}
+                rotuloLimpar="Trocar candidato"
+                onEscolher={(c) => setAt(k, c.id)}
+              />
+
             </div>
           </div>
         ))}

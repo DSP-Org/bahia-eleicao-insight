@@ -1,7 +1,9 @@
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { slugify } from "@/lib/eleicoes";
 
 // Campo de busca com sugestões. Ignora acentos e aceita vários termos ("tito 13789").
+// Com `selecionado`, o nome já escolhido aparece como um campo editável: basta clicar
+// nele ou começar a digitar para buscar outro, sem precisar limpar antes.
 export function BuscaItem<T>({
   itens,
   busca,
@@ -9,6 +11,10 @@ export function BuscaItem<T>({
   onEscolher,
   placeholder,
   rotulo,
+  selecionado,
+  chip,
+  onLimpar,
+  rotuloLimpar = "Limpar escolha",
 }: {
   itens: T[];
   busca: (t: T) => string; // texto já sem acento
@@ -16,10 +22,24 @@ export function BuscaItem<T>({
   onEscolher: (t: T) => void;
   placeholder: string;
   rotulo: string;
+  selecionado?: T | null;
+  chip?: (t: T) => ReactNode; // como mostrar o escolhido (padrão: render)
+  onLimpar?: () => void;
+  rotuloLimpar?: string;
 }) {
   const [q, setQ] = useState("");
   const [aberto, setAberto] = useState(false);
   const [ativo, setAtivo] = useState(0);
+  const [editando, setEditando] = useState(false);
+  const campoRef = useRef<HTMLInputElement>(null);
+
+  const temSelecionado = selecionado != null;
+  const mostrandoChip = temSelecionado && !editando;
+
+  useEffect(() => {
+    if (editando && document.activeElement !== campoRef.current) campoRef.current?.focus();
+  }, [editando]);
+
   const achados = useMemo(() => {
     const termos = slugify(q.trim()).split(/\s+/).filter(Boolean);
     return termos.length
@@ -33,11 +53,64 @@ export function BuscaItem<T>({
     setQ("");
     setAberto(false);
     setAtivo(0);
+    setEditando(false);
   };
+
+  const abrirEdicao = (letra?: string) => {
+    setEditando(true);
+    setQ(letra ?? "");
+    setAberto(true);
+    setAtivo(0);
+  };
+
+  if (mostrandoChip && selecionado != null) {
+    return (
+      <div className="relative min-w-0 max-w-full">
+        <div
+          role="button"
+          tabIndex={0}
+          title="Clique ou comece a digitar para escolher outro"
+          onClick={() => abrirEdicao()}
+          onFocus={() => abrirEdicao()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              abrirEdicao();
+            } else if (e.key === "Backspace" || e.key === "Delete") {
+              e.preventDefault();
+              onLimpar?.();
+            } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+              e.preventDefault();
+              abrirEdicao(e.key);
+            }
+          }}
+          className="flex w-full min-w-0 cursor-text items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm hover:border-ring focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <span className="min-w-0 truncate font-medium">{(chip ?? render)(selecionado)}</span>
+          {onLimpar && (
+            <button
+              type="button"
+              aria-label={rotuloLimpar}
+              title={rotuloLimpar}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                onLimpar();
+              }}
+              className="shrink-0 px-1 text-muted-foreground hover:text-foreground"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative min-w-0 max-w-full">
       <input
+        ref={campoRef}
         value={q}
         placeholder={placeholder}
         aria-label={rotulo}
@@ -47,7 +120,13 @@ export function BuscaItem<T>({
           setAtivo(0);
         }}
         onFocus={() => setAberto(true)}
-        onBlur={() => setAberto(false)}
+        onBlur={() => {
+          setAberto(false);
+          if (temSelecionado) {
+            setEditando(false);
+            setQ("");
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") {
             e.preventDefault();
