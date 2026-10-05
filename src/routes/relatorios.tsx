@@ -1,16 +1,76 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { CARGOS, useMeta, useMunData, useMunicipios, winner, nf, pf, pct, downloadCSV, slugify } from "@/lib/eleicoes";
-import { PageHead, Card, Loading, Select, Btn } from "@/components/ui-bits";
-import { FileDown, LoaderCircle } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQueries } from "@tanstack/react-query";
+import { useMemo, useState, type ReactNode } from "react";
+import { FileDown, Link2, LoaderCircle } from "lucide-react";
+import { useMeta, useMunicipios, nf, type MunData } from "@/lib/eleicoes";
+import { PageHead, Loading, Select, Btn } from "@/components/ui-bits";
+import { Blocos } from "@/components/relatorios/Blocos";
+import { BuscaItem } from "@/components/relatorios/BuscaItem";
+import {
+  NOME_CURTO,
+  PROPORCIONAIS,
+  REGIOES,
+  SLUGS,
+  montarBase,
+  nomesRegioes,
+  recorteNome,
+  ehSlug,
+  type Base,
+  type Slug,
+} from "@/lib/relatorios/base";
+import {
+  RELATORIOS,
+  baixarDados,
+  candidatoPadrao,
+  municipioPadrao,
+  opcoesPartido,
+  slugDe,
+  tabelasDe,
+  type Controle,
+  type Estado,
+} from "@/lib/relatorios/definicoes";
+
+const CHAVES = [
+  "r",
+  "cargo",
+  "escopo",
+  "agrupar",
+  "reg",
+  "partido",
+  "pn",
+  "sit",
+  "cand",
+  "mun",
+  "agr",
+  "cargob",
+  "min",
+] as const;
 
 export const Route = createFileRoute("/relatorios")({
+  // O estado fica na URL: qualquer relatório com seus filtros pode ser compartilhado por link.
+  validateSearch: (s: Record<string, unknown>): Estado => {
+    const out: Estado = {};
+    for (const k of CHAVES) {
+      const v = s[k];
+      if (typeof v === "string" && v) out[k] = v;
+      else if (typeof v === "number") out[k] = String(v);
+    }
+    return out;
+  },
   head: () => ({
     meta: [
       { title: "Relatórios — Data5 Analytics | Eleições 2026 - BA" },
-      { name: "description", content: "Data5 Analytics: relatórios das Eleições 2026 na Bahia por município, região e concentração de votos, em PDF e CSV." },
+      {
+        name: "description",
+        content:
+          "Data5 Analytics: 15 relatórios das Eleições 2026 na Bahia por município, território, região, partido e candidato, em PDF e CSV.",
+      },
       { property: "og:title", content: "Relatórios — Data5 Analytics | Eleições 2026 - BA" },
-      { property: "og:description", content: "Relatórios completos com filtro e download em PDF e CSV." },
+      {
+        property: "og:description",
+        content:
+          "Relatórios completos com filtro por território, região ou município e download em PDF e CSV.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -18,128 +78,478 @@ export const Route = createFileRoute("/relatorios")({
   component: Relatorios,
 });
 
-const TIPOS = [
-  { v: "mun", n: "Por município" },
-  { v: "reg", n: "Por região (IBGE)" },
-  { v: "abst", n: "Comparecimento e abstenção" },
-  { v: "conc", n: "Concentração de votos" },
-];
-
-function Relatorios() {
-  const [tipo, setTipo] = useState("mun");
-  const [slug, setSlug] = useState("governador");
-  const [q, setQ] = useState("");
-  const [exporting, setExporting] = useState(false);
-  const [pdfError, setPdfError] = useState("");
+function useBase(): Base | null {
   const { data: meta } = useMeta();
   const { data: muns } = useMunicipios();
-  const { data: md } = useMunData(slug);
-  const cargo = meta?.cargos.find((c) => c.slug === slug);
+  // Mesma chave de cache de useMunData: os arquivos já baixados por outras páginas são reaproveitados.
+  const qs = useQueries({
+    queries: SLUGS.map((slug) => ({
+      queryKey: ["mun", slug],
+      queryFn: () =>
+        fetch(`/data/mun-${slug}.json`).then((r) => {
+          if (!r.ok) throw new Error("Falha ao carregar dados");
+          return r.json() as Promise<MunData>;
+        }),
+      staleTime: Infinity,
+      gcTime: Infinity,
+    })),
+  });
+  const versao = qs.map((q) => q.dataUpdatedAt).join();
+  return useMemo(() => {
+    if (!meta || !muns || qs.some((q) => !q.data)) return null;
+    return montarBase(
+      meta,
+      muns,
+      Object.fromEntries(SLUGS.map((s, i) => [s, qs[i]?.data])) as Record<Slug, MunData>,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [meta, muns, versao]);
+}
 
-  const table = useMemo((): { head: string[]; rows: (string | number)[][]; links?: string[] } | null => {
-    if (!md || !muns || !cargo) return null;
-    const C = cargo.candidatos;
-    if (tipo === "mun") {
-      const t1 = C[0], t2 = C[1];
-      const rows = muns.map((m) => {
-        const r = md[m.tse]; if (!r) return [m.nome, "", "", "", "", "", "", ""];
-        const w = winner(r);
-        return [m.nome, m.ri, r.el, pf(pct(r.co, r.el)), `${C[w]?.nome} (${C[w]?.partido})`, pf(pct(r.v[w] ?? 0, r.vv)), pf(pct(r.v[0] ?? 0, r.vv)), pf(pct(r.v[1] ?? 0, r.vv))];
-      });
-      return { head: ["Município", "Região", "Eleitores", "Comparec.", "Vencedor", "% venc.", `% ${t1.nome}`, `% ${t2?.nome}`], rows, links: muns.map((m) => m.tse) };
-    }
-    if (tipo === "reg" || tipo === "abst") {
-      const g: Record<string, { el: number; co: number; ab: number; vb: number; vn: number; vv: number; v: Record<number, number>; n: number }> = {};
-      muns.forEach((m) => {
-        const r = md[m.tse]; if (!r) return;
-        const x = (g[m.ri] ??= { el: 0, co: 0, ab: 0, vb: 0, vn: 0, vv: 0, v: {}, n: 0 });
-        x.el += r.el; x.co += r.co; x.ab += r.ab; x.vb += r.vb; x.vn += r.vn; x.vv += r.vv; x.n++;
-        for (const [k, v] of Object.entries(r.v)) x.v[+k] = (x.v[+k] ?? 0) + v;
-      });
-      const ent = Object.entries(g);
-      if (tipo === "abst") {
-        const rows = muns.flatMap((m) => { const r = md[m.tse]; if (!r) return []; return [[m.nome, m.ri, r.el, r.co, pf(pct(r.co, r.el)), pf(pct(r.ab, r.el)), pf(pct(r.vb, r.co)), pf(pct(r.vn, r.co))]]; })
-          .sort((a, b) => parseFloat(String(b[5]).replace(",", ".")) - parseFloat(String(a[5]).replace(",", ".")));
-        return { head: ["Município", "Região", "Eleitores", "Comparec.", "% comparec.", "% abstenção", "% brancos", "% nulos"], rows };
-      }
-      const rows = ent.map(([n, x]) => {
-        const top = Object.entries(x.v).sort((a, b) => b[1] - a[1]).slice(0, 3);
-        return [n, x.n, x.el, pf(pct(x.co, x.el)), ...top.flatMap(([k, v]) => [`${C[+k].nome} (${C[+k].partido})`, pf(pct(v, x.vv))])];
-      }).sort((a, b) => Number(b[2]) - Number(a[2]));
-      return { head: ["Região", "Municípios", "Eleitores", "Comparec.", "1º", "%", "2º", "%", "3º", "%"], rows };
-    }
-    // concentração: para cada candidato, % dos votos no maior município e índice HHI
-    const acc = C.map(() => ({ top: 0, topMun: "", hhi: 0, n: 0 }));
-    muns.forEach((m) => {
-      const r = md[m.tse]; if (!r) return;
-      for (const [k, v] of Object.entries(r.v)) {
-        const a = acc[+k]; const tot = C[+k].votos || 1; const s = v / tot;
-        a.hhi += s * s; a.n++; if (v > a.top) { a.top = v; a.topMun = m.nome; }
-      }
+function Relatorios() {
+  const st = Route.useSearch();
+  const navigate = useNavigate({ from: "/relatorios" });
+  const B = useBase();
+  const [gerando, setGerando] = useState(false);
+  const [erroPdf, setErroPdf] = useState("");
+  const [copiado, setCopiado] = useState(false);
+
+  const rel =
+    RELATORIOS.find((r) => r.id === st.r) ?? (RELATORIOS[0] as (typeof RELATORIOS)[number]);
+  const ef = useMemo((): Estado => {
+    const e: Estado = { ...rel.padrao, ...st };
+    if (rel.controles.includes("cargoprop") && !PROPORCIONAIS.includes(e.cargo as Slug))
+      e.cargo = "deputado-estadual";
+    if (B && rel.controles.includes("cand") && !B.candPorId.has(e.cand ?? ""))
+      e.cand = candidatoPadrao(B);
+    if (B && rel.controles.includes("mun") && !B.porTse.has(e.mun ?? ""))
+      e.mun = municipioPadrao(B);
+    return e;
+  }, [rel, st, B]);
+  const blocos = useMemo(() => (B ? rel.gerar(B, ef) : []), [B, rel, ef]);
+
+  // Troca um filtro mantendo os outros; ao trocar o cargo, limpa os filtros que dependem dele.
+  const definir = (k: (typeof CHAVES)[number], v: string) => {
+    navigate({
+      search: (prev: Estado) => {
+        const n: Estado = { ...prev };
+        if (v) n[k] = v;
+        else delete n[k];
+        if (k === "cargo") {
+          delete n.partido;
+          delete n.pn;
+          delete n.sit;
+          delete n.agr;
+        }
+        if (k === "cand") delete n.cargob;
+        return n;
+      },
+      replace: true,
     });
-    const rows = C.slice(0, 400).map((c, i) => [c.nome, c.partido, c.votos, acc[i].n, acc[i].topMun, pf(pct(acc[i].top, c.votos)), (acc[i].hhi * 10000).toFixed(0)]);
-    return { head: ["Candidato", "Partido", "Votos", "Municípios c/ voto", "Maior reduto", "% no reduto", "Índice concentração (HHI)"], rows };
-  }, [tipo, md, muns, cargo]);
+  };
+  const trocar = (id: string) => {
+    // ao mudar de relatório, mantém cargo, recorte, candidato e município
+    const n: Estado = { r: id };
+    for (const k of ["cargo", "escopo", "cand", "mun"] as const) {
+      const v = st[k];
+      if (v) n[k] = v;
+    }
+    navigate({ search: n });
+  };
 
-  if (!meta) return <Loading />;
-  const rows = table ? table.rows.map((r, i) => ({ r, i })).filter(({ r }) => !q || slugify(r.join(" ")).includes(slugify(q))) : [];
-  const exportPDF = async () => {
-    if (!table || !cargo || exporting) return;
-    setExporting(true); setPdfError("");
+  if (!B) return <Loading />;
+
+  const filtros =
+    [
+      (rel.controles.includes("cargo") || rel.controles.includes("cargoprop")) && ehSlug(ef.cargo)
+        ? B.cargos[ef.cargo].cargo.nome
+        : "",
+      rel.controles.includes("escopo") ? recorteNome(ef.escopo, B) : "",
+      rel.controles.includes("cand") ? (B.candPorId.get(ef.cand ?? "")?.c.nome ?? "") : "",
+      rel.controles.includes("mun") ? (B.muns[B.porTse.get(ef.mun ?? "") ?? -1]?.nome ?? "") : "",
+    ]
+      .filter(Boolean)
+      .join(" · ") || "Bahia";
+  const temTabela = tabelasDe(blocos).length > 0;
+  const grupos = [...new Set(RELATORIOS.map((r) => r.grupo))];
+
+  const baixarPDF = async () => {
+    if (gerando) return;
+    setGerando(true);
+    setErroPdf("");
     try {
-      const { downloadReportPDF } = await import("@/lib/report-pdf");
-      await downloadReportPDF({
-        title: TIPOS.find((t) => t.v === tipo)?.n ?? "Relatório", cargo: cargo.nome,
-        filter: q, headers: table.head, rows: rows.map((x) => x.r),
-        summary: [
-          { label: "Votos válidos no estado", value: nf(cargo.resumo.validos) },
-          { label: "Comparecimento no estado", value: pf(pct(cargo.resumo.comp, cargo.resumo.eleitores)) },
-          { label: "Registros selecionados", value: nf(rows.length) },
-        ],
-        ranking: cargo.candidatos.slice(0, 3).map((c) => ({ name: `${c.nome} (${c.partido})`, value: `${nf(c.votos)} votos · ${pf(c.pct)}`, share: c.pct / 100 })),
-      });
-    } catch (error) { console.error("Falha ao gerar relatório PDF", error); setPdfError("Não foi possível gerar o PDF. Tente novamente."); }
-    finally { setExporting(false); }
+      const { baixarRelatorioPDF } = await import("@/lib/report-pdf-blocos");
+      await baixarRelatorioPDF({ titulo: rel.titulo, grupo: rel.grupo, filtros, blocos });
+    } catch (e) {
+      console.error("Falha ao gerar relatório PDF", e);
+      setErroPdf("Não foi possível gerar o PDF. Tente novamente.");
+    } finally {
+      setGerando(false);
+    }
+  };
+  const copiarLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 2000);
+    } catch {
+      /* sem permissão: ignora */
+    }
   };
 
   return (
     <div>
-      <PageHead kicker="Data5 Analytics · Relatórios" title="Dados em tabela" />
-      <div className="mb-4 flex flex-wrap gap-3">
-        <div className="flex flex-wrap gap-1">
-          {TIPOS.map((t) => (
-            <button key={t.v} onClick={() => setTipo(t.v)} className={`rounded-full border px-3 py-1.5 text-sm ${tipo === t.v ? "border-foreground bg-foreground text-background" : "border-border hover:bg-accent"}`}>{t.n}</button>
-          ))}
-        </div>
-        <Select value={slug} onChange={setSlug}>{CARGOS.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}</Select>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrar…" className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
-        {table && <Btn onClick={() => downloadCSV(`relatorio-${tipo}-${slug}.csv`, [table.head, ...rows.map((x) => x.r)])}>Baixar CSV</Btn>}
-        {table && <Btn onClick={exportPDF} disabled={exporting}>{exporting ? <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" /> : <FileDown size={16} />}{exporting ? "Gerando PDF…" : "Baixar PDF"}</Btn>}
-      </div>
-      {pdfError && <p role="alert" className="mb-3 text-sm text-destructive">{pdfError}</p>}
-      {tipo === "conc" && <p className="mb-3 text-sm text-muted-foreground">HHI alto (perto de 10.000) = votos concentrados em poucos municípios; baixo = votação espalhada pelo estado.</p>}
-      <Card>
-        {!table ? <Loading /> : (
-          <div className="max-h-[70vh] overflow-auto">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-card text-left text-xs uppercase text-muted-foreground">
-                <tr>{table.head.map((h, i) => <th key={i} className="px-2 py-2">{h}</th>)}</tr>
-              </thead>
-              <tbody>
-                {rows.map(({ r, i }) => (
-                  <tr key={i} className="border-t border-border">
-                    {r.map((c, k) => (
-                      <td key={k} className={`px-2 py-1.5 ${typeof c === "number" || /^[\d.,%]+$/.test(String(c)) ? "text-right font-mono" : ""}`}>
-                        {k === 0 && table.links ? <Link to="/municipio/$codigo" params={{ codigo: table.links[i] }} className="hover:underline">{c}</Link> : typeof c === "number" ? nf(c) : c}
-                      </td>
-                    ))}
-                  </tr>
+      <PageHead kicker={`Data5 Analytics · Relatórios · ${rel.grupo}`} title={rel.titulo}>
+        {rel.desc}
+      </PageHead>
+      <div className="grid gap-6 lg:grid-cols-[230px_minmax(0,1fr)]">
+        <aside>
+          <label
+            className="mb-1 block text-xs uppercase tracking-wider text-muted-foreground lg:hidden"
+            htmlFor="rel-select"
+          >
+            Relatório
+          </label>
+          <select
+            id="rel-select"
+            value={rel.id}
+            onChange={(e) => trocar(e.target.value)}
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm lg:hidden"
+          >
+            {grupos.map((g) => (
+              <optgroup key={g} label={g}>
+                {RELATORIOS.filter((r) => r.grupo === g).map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.titulo}
+                  </option>
                 ))}
-              </tbody>
-            </table>
+              </optgroup>
+            ))}
+          </select>
+          <nav className="hidden space-y-4 lg:block" aria-label="Relatórios">
+            {grupos.map((g) => (
+              <div key={g}>
+                <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+                  {g}
+                </p>
+                {RELATORIOS.filter((r) => r.grupo === g).map((r) => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => trocar(r.id)}
+                    className={`block w-full rounded-md px-2 py-1.5 text-left text-sm ${r.id === rel.id ? "bg-foreground text-background" : "hover:bg-accent"}`}
+                  >
+                    {r.titulo}
+                  </button>
+                ))}
+              </div>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="min-w-0 space-y-5">
+          <div className="flex flex-wrap items-end gap-3">
+            {rel.controles.map((c) => (
+              <Controle key={c} c={c} B={B} st={ef} definir={definir} />
+            ))}
+            <div className="ml-auto flex flex-wrap gap-2">
+              <Btn onClick={copiarLink}>
+                <Link2 size={16} />
+                {copiado ? "Link copiado" : "Copiar link"}
+              </Btn>
+              {temTabela && (
+                <Btn onClick={baixarPDF} disabled={gerando}>
+                  {gerando ? (
+                    <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" />
+                  ) : (
+                    <FileDown size={16} />
+                  )}
+                  {gerando ? "Gerando PDF…" : "Baixar PDF"}
+                </Btn>
+              )}
+            </div>
           </div>
-        )}
-      </Card>
+          <p className="font-mono text-xs uppercase tracking-wider text-primary">{filtros}</p>
+          {erroPdf && (
+            <p role="alert" className="text-sm text-destructive">
+              {erroPdf}
+            </p>
+          )}
+          <Blocos
+            blocos={blocos}
+            chave={`${rel.id}|${JSON.stringify(ef)}`}
+            onBaixar={(id) => baixarDados(B, id)}
+          />
+        </div>
+      </div>
     </div>
   );
+}
+
+function Campo({
+  rotulo,
+  children,
+  largo = false,
+}: {
+  rotulo: string;
+  children: ReactNode;
+  largo?: boolean;
+}) {
+  return (
+    <label className={`flex flex-col gap-1 ${largo ? "w-full md:w-80" : ""}`}>
+      <span className="text-xs uppercase tracking-wider text-muted-foreground">{rotulo}</span>
+      {children}
+    </label>
+  );
+}
+
+function Controle({
+  c,
+  B,
+  st,
+  definir,
+}: {
+  c: Controle;
+  B: Base;
+  st: Estado;
+  definir: (k: (typeof CHAVES)[number], v: string) => void;
+}) {
+  const slug = slugDe(st);
+  switch (c) {
+    case "cargo":
+    case "cargoprop":
+      return (
+        <Campo rotulo="Cargo">
+          <Select value={st.cargo ?? ""} onChange={(v) => definir("cargo", v)}>
+            {(c === "cargo" ? SLUGS : PROPORCIONAIS).map((s) => (
+              <option key={s} value={s}>
+                {B.cargos[s].cargo.nome}
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    case "cargob": {
+      const ref = B.candPorId.get(st.cand ?? "");
+      const padrao =
+        st.cargob ?? (ref?.slug === "deputado-estadual" ? "deputado-federal" : "deputado-estadual");
+      return (
+        <Campo rotulo="Comparar com o cargo">
+          <Select value={padrao} onChange={(v) => definir("cargob", v)}>
+            {SLUGS.map((s) => (
+              <option key={s} value={s}>
+                {B.cargos[s].cargo.nome}
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    }
+    case "escopo":
+      return (
+        <Campo rotulo="Recorte">
+          <Select
+            value={st.escopo ?? "ba"}
+            onChange={(v) => definir("escopo", v)}
+            className="max-w-72"
+          >
+            <option value="ba">Bahia inteira</option>
+            {(Object.keys(REGIOES) as (keyof typeof REGIOES)[]).map((k) => (
+              <optgroup key={k} label={REGIOES[k]}>
+                {nomesRegioes(k, B.muns).map((n) => (
+                  <option key={n} value={`${k}:${n}`}>
+                    {n}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+            <optgroup label="Município">
+              {B.muns.map((m) => (
+                <option key={m.tse} value={`mun:${m.tse}`}>
+                  {m.nome}
+                </option>
+              ))}
+            </optgroup>
+          </Select>
+        </Campo>
+      );
+    case "agrupar":
+      return (
+        <Campo rotulo="Agrupar por">
+          <Select value={st.agrupar ?? "mun"} onChange={(v) => definir("agrupar", v)}>
+            <option value="mun">Município</option>
+            {(Object.keys(REGIOES) as (keyof typeof REGIOES)[]).map((k) => (
+              <option key={k} value={k}>
+                {REGIOES[k]}
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    case "reg":
+      return (
+        <Campo rotulo="Regionalização">
+          <Select value={st.reg ?? "ri"} onChange={(v) => definir("reg", v)}>
+            {(Object.keys(REGIOES) as (keyof typeof REGIOES)[]).map((k) => (
+              <option key={k} value={k}>
+                {REGIOES[k]}
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    case "partido": {
+      const ps = [...new Set(B.cargos[slug].cargo.candidatos.map((x) => x.partido))].sort();
+      return (
+        <Campo rotulo="Partido">
+          <Select value={st.partido ?? ""} onChange={(v) => definir("partido", v)}>
+            <option value="">Todos</option>
+            {ps.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    }
+    case "pn": {
+      const ps = opcoesPartido(B, slug);
+      return (
+        <Campo rotulo="Partido">
+          <Select value={st.pn ?? ps[0]?.n ?? ""} onChange={(v) => definir("pn", v)}>
+            {ps.map((p) => (
+              <option key={p.n} value={p.n}>
+                {p.sg} ({p.n})
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    }
+    case "sit": {
+      const nomes: Record<string, string> = {
+        eleito: "Eleitos",
+        suplente: "Suplentes",
+        nao_eleito: "Não eleitos",
+        segundo_turno: "2º turno",
+        aguardando: "Aguardando TSE",
+      };
+      const tipos = [
+        ...new Set(
+          B.cargos[slug].cargo.candidatos.map(
+            (x) => x.sitTipo ?? (x.eleito ? "eleito" : "nao_eleito"),
+          ),
+        ),
+      ];
+      return (
+        <Campo rotulo="Situação">
+          <Select value={st.sit ?? ""} onChange={(v) => definir("sit", v)}>
+            <option value="">Todas</option>
+            {tipos.map((t) => (
+              <option key={t} value={t}>
+                {nomes[t] ?? t}
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    }
+    case "agr": {
+      const ags =
+        B.cargos[slug === "deputado-federal" ? "deputado-federal" : "deputado-estadual"].cargo
+          .agremiacoes ?? [];
+      return (
+        <Campo rotulo="Partido / federação">
+          <Select value={st.agr ?? ""} onChange={(v) => definir("agr", v)} className="max-w-72">
+            <option value="">Todas com vaga</option>
+            {ags.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nome} ({a.vagas} vaga{a.vagas === 1 ? "" : "s"})
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    }
+    case "min":
+      return (
+        <Campo rotulo="Mínimo de votos">
+          <Select value={st.min ?? "0"} onChange={(v) => definir("min", v)}>
+            {["0", "1000", "5000", "10000", "30000", "100000"].map((v) => (
+              <option key={v} value={v}>
+                {v === "0" ? "Todos" : `${nf(Number(v))}+`}
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    case "cand": {
+      const atual = B.candPorId.get(st.cand ?? "");
+      const lista = SLUGS.flatMap((s) =>
+        B.cargos[s].cargo.candidatos.map((x) => ({
+          c: x,
+          s,
+          busca: `${x.nome} ${x.nomeCompleto} ${x.n} ${x.partido}`,
+        })),
+      );
+      return (
+        <Campo
+          rotulo={`Candidato${atual ? `: ${atual.c.nome} (${NOME_CURTO[atual.slug]})` : ""}`}
+          largo
+        >
+          <BuscaItem
+            itens={lista}
+            rotulo="Buscar candidato"
+            placeholder="Nome ou número (ex.: tito, jeronimo, 13789)"
+            busca={(x) => slugBusca(x.busca)}
+            onEscolher={(x) => definir("cand", x.c.id)}
+            render={(x) => (
+              <>
+                <b>{x.c.nome}</b>{" "}
+                <span className="text-muted-foreground">
+                  · {NOME_CURTO[x.s]} · {x.c.partido} {x.c.n} · {nf(x.c.votos)} votos
+                </span>
+              </>
+            )}
+          />
+        </Campo>
+      );
+    }
+    case "mun": {
+      const atual = B.muns[B.porTse.get(st.mun ?? "") ?? -1];
+      return (
+        <Campo rotulo={`Município${atual ? `: ${atual.nome}` : ""}`} largo>
+          <BuscaItem
+            itens={B.muns.map((m, i) => ({ m, i }))}
+            rotulo="Buscar município"
+            placeholder="Digite o nome da cidade"
+            busca={(x) => B.buscaMun[x.i] ?? ""}
+            onEscolher={(x) => definir("mun", x.m.tse)}
+            render={(x) => (
+              <>
+                <b>{x.m.nome}</b> <span className="text-muted-foreground">· {x.m.ti}</span>
+              </>
+            )}
+          />
+        </Campo>
+      );
+    }
+    default:
+      return null;
+  }
+}
+
+// Cache do texto de busca sem acento (a lista de candidatos é recriada a cada render).
+const cacheBusca = new Map<string, string>();
+function slugBusca(s: string): string {
+  let v = cacheBusca.get(s);
+  if (v == null) {
+    v = s
+      .normalize("NFD")
+      .replace(/\p{Diacritic}/gu, "")
+      .toLowerCase();
+    cacheBusca.set(s, v);
+  }
+  return v;
 }

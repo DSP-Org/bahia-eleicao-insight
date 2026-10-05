@@ -63,12 +63,14 @@ function CandPage() {
     <div>
       <PageHead kicker={`${cargo.nome} · ${cand.partido} · nº ${cand.n}`} title={cand.nome}>
         {cand.nomeCompleto} · {cand.agr}{cand.vice.length ? ` · Vice/suplentes: ${cand.vice.join(", ")}` : ""}
+        {" · "}<Link to="/relatorios" search={{ r: "dossie", cand: cand.id }} className="text-primary underline">Dossiê completo (PDF)</Link>
       </PageHead>
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat label="Votos" value={nf(cand.votos)} />
         <Stat label="% válidos" value={pf(cand.pct)} />
         <Stat label="Posição" value={`${pos}º`} sub={`de ${cargo.candidatos.length}`} />
-        <Stat label="Situação" value={<span className="text-lg">{cand.situacao || "—"}</span>} />
+        <Stat label="Situação" value={<span className="text-lg">{cand.sit || cand.situacao || "—"}</span>}
+          {...(cand.faltou != null ? { sub: `faltaram ${nf(cand.faltou)} votos` } : cand.margem != null ? { sub: `margem de ${nf(cand.margem)} votos` } : {})} />
         <Stat label="Concentração" value={pf(top10share, 1)} sub="dos votos vêm dos 10 maiores municípios" />
       </div>
       <div className="grid gap-5 lg:grid-cols-[1fr_380px]">

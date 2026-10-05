@@ -34,7 +34,7 @@ function CargoPage() {
     const m: Record<string, { sg: string; votos: number; eleitos: number; cands: number }> = {};
     for (const c of cargo.candidatos) {
       const p = (m[c.partido] ??= { sg: c.partido, votos: 0, eleitos: 0, cands: 0 });
-      p.votos += c.votos; p.cands++; if (c.eleito) p.eleitos++;
+      p.votos += c.votos; p.cands++; if (c.eleito || c.sitTipo === "eleito") p.eleitos++;
     }
     for (const p of cargo.partidos) if (m[p.sg] && p.votosTot > m[p.sg].votos) m[p.sg].votos = p.votosTot;
     return Object.values(m).sort((a, b) => b.votos - a.votos);
@@ -47,12 +47,19 @@ function CargoPage() {
     .filter((c) => !q || slugify(c.nome + c.partido + c.n).includes(slugify(q)))
     .sort((a, b) => (sort === "votos" ? b.votos - a.votos : a.nome.localeCompare(b.nome)));
   const chart = cargo.candidatos.slice(0, 15).map((c) => ({ nome: c.nome, votos: c.votos, partido: c.partido }));
-  const eleitos = cargo.candidatos.filter((c) => c.eleito).length;
+  const eleitos = cargo.candidatos.filter((c) => c.eleito || c.sitTipo === "eleito").length;
+  const projecao = cargo.candidatos.some((c) => c.proj);
 
   return (
     <div>
       <CargoTabs current={slug} />
       <PageHead kicker={`${cargo.vagas} vaga${cargo.vagas > 1 ? "s" : ""} · resultado final`} title={cargo.nome} />
+      {projecao && (
+        <p role="note" className="mb-6 rounded-md border-l-4 border-primary bg-card px-4 py-3 text-sm">
+          A situação de cada candidato (eleito ou suplente) é uma projeção: o TSE já distribuiu as vagas por partido e federação, mas ainda não publicou a lista de eleitos.{" "}
+          <Link to="/relatorios" search={{ r: "faltou", cargo: slug }} className="text-primary underline">Ver eleitos, suplentes e quanto faltou</Link>
+        </p>
+      )}
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat label="Votos válidos" value={nf(r.validos)} />
         <Stat label="Brancos" value={pf(pct(r.brancos, r.total))} sub={nf(r.brancos)} />
@@ -101,7 +108,7 @@ function CargoPage() {
           <div className="flex gap-2">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nome, partido, número" className="rounded-md border border-input bg-background px-3 py-1.5 text-sm" />
             <Btn onClick={() => setSort(sort === "votos" ? "nome" : "votos")}>Ordenar: {sort}</Btn>
-            <Btn onClick={() => downloadCSV(`candidatos-${slug}.csv`, [["Nome", "Número", "Partido", "Coligação", "Votos", "%", "Situação"], ...cargo.candidatos.map((c) => [c.nome, c.n, c.partido, c.agr, c.votos, c.pct, c.situacao])])}>CSV</Btn>
+            <Btn onClick={() => downloadCSV(`candidatos-${slug}.csv`, [["Nome", "Número", "Partido", "Coligação", "Votos", "%", "Situação"], ...cargo.candidatos.map((c) => [c.nome, c.n, c.partido, c.agr, c.votos, c.pct, c.sit || c.situacao])])}>CSV</Btn>
           </div>}>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -118,7 +125,7 @@ function CargoPage() {
                     <td className="hidden max-w-xs truncate text-muted-foreground md:table-cell">{c.agr}</td>
                     <td className="text-right font-mono">{nf(c.votos)}</td>
                     <td className="text-right font-mono">{pf(c.pct)}</td>
-                    <td className={c.eleito ? "font-semibold text-primary" : "text-muted-foreground"}>{c.situacao || (c.valido !== "Válido" ? c.valido : "")}</td>
+                    <td className={c.eleito || c.sitTipo === "eleito" ? "font-semibold text-primary" : "text-muted-foreground"}>{c.sit || c.situacao || (c.valido !== "Válido" ? c.valido : "")}</td>
                   </tr>
                 ))}
               </tbody>
