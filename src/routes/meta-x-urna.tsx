@@ -263,7 +263,7 @@ function Analise({ plano }: { plano: Plano }) {
           setGerando(true); setErroPdf("");
           try {
             const { baixarRelatorioPDF } = await import("@/lib/report-pdf-blocos");
-            const grupos = (filtro ? [filtro] : (["superou", "abaixo", "zerado", "sem_meta"] as Status[]));
+            const grupos = (filtro ? [filtro] : (["superou", "abaixo", "zerado", "sem_meta"] as Status[]).filter((s) => cont(s) > 0));
             const colunas: Coluna[] = [
               { titulo: "Município", tipo: "mun" }, { titulo: "Região", tipo: "texto" }, { titulo: "Meta", tipo: "int" },
               { titulo: "Votos", tipo: "int" }, { titulo: "Diferença", tipo: "dif" }, { titulo: "% da meta", tipo: "pct", casas: 1 },
