@@ -104,6 +104,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen">
+        <InstallAppBanner />
         <header className="border-b border-border bg-card">
           <div className="mx-auto grid max-w-7xl gap-3 px-4 py-3 md:flex md:flex-wrap md:items-center md:justify-between">
             <Link to="/" className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
