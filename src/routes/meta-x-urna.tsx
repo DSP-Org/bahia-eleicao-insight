@@ -108,8 +108,8 @@ function Conteudo({ pin }: { pin: string }) {
         )}
         <Btn onClick={() => setNovo((v) => !v)}>{novo ? "Fechar envio" : "Enviar planilha de planejamento"}</Btn>
       </div>
-      {(novo || !planos?.length) && <Envio onSalvo={(id) => { setPlanoId(id); setNovo(false); }} />}
-      {plano && !novo && <Analise plano={plano} />}
+      {(novo || !planos?.length) && <Envio pin={pin} onSalvo={(id) => { setPlanoId(id); setNovo(false); }} />}
+      {plano && !novo && <Analise plano={plano} pin={pin} />}
     </div>
   );
 }
@@ -150,7 +150,7 @@ async function lerPlanilha(file: File, muns: Municipio[]) {
   return { metas, naoAchados };
 }
 
-function Envio({ onSalvo }: { onSalvo: (id: string) => void }) {
+function Envio({ pin, onSalvo }: { pin: string; onSalvo: (id: string) => void }) {
   const { data: meta } = useMeta();
   const { data: muns } = useMunicipios();
   const qc = useQueryClient();
@@ -158,7 +158,7 @@ function Envio({ onSalvo }: { onSalvo: (id: string) => void }) {
   const [slug, setSlug] = useState("governador");
   const [candId, setCandId] = useState("");
   const [nome, setNome] = useState("");
-  const [senha, setSenha] = useState("");
+  const senha = pin;
   const [lido, setLido] = useState<{ metas: Record<string, number>; naoAchados: string[]; arquivo: string } | null>(null);
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
