@@ -45,6 +45,47 @@ function Comparar() {
   const wins = cands.map((_, k) => rows.filter((r) => r.w === k && r.vs[k] > 0).length);
   const setAt = (k: number, id: string) => { const n = [...sel]; n[k] = id; setIds(n.filter(Boolean)); };
 
+  // Vantagem de cada candidato sobre o melhor dos demais, por município.
+  const vantagens = cands.map((_, k) =>
+    rows
+      .map((r) => ({ r, v: r.vs[k] - Math.max(...r.vs.filter((_, j) => j !== k)) }))
+      .filter((x) => x.v > 0)
+      .sort((a, b) => b.v - a.v)
+      .slice(0, 15),
+  );
+
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const baixarPDF = async () => {
+    setPdfBusy(true);
+    try {
+      const { downloadReportPDF } = await import("@/lib/report-pdf");
+      const ordenados = [...rows].sort((a, b) => b.vs[b.w] - a.vs[a.w]);
+      await downloadReportPDF({
+        title: `Comparativo — ${cargo.nome}`,
+        cargo: cargo.nome,
+        filter: cands.map((c) => c.nome).join(" × "),
+        headers: ["Município", ...cands.map((c) => c.nome), "Vencedor", "Diferença"],
+        rows: ordenados.map((r) => [
+          r.m.nome,
+          ...r.vs,
+          r.vs[r.w] > 0 ? cands[r.w].nome : "—",
+          r.vs.length > 1 ? r.vs[r.w] - Math.max(...r.vs.filter((_, j) => j !== r.w)) : r.vs[0],
+        ]),
+        summary: [
+          ...cands.slice(0, 3).map((c, k) => ({ label: c.nome, value: nf(c.votos) })),
+          { label: "Municípios", value: nf(rows.length) },
+        ],
+        ranking: cands.map((c, k) => ({
+          name: c.nome,
+          value: `${nf(wins[k])} municípios`,
+          share: rows.length ? wins[k] / rows.length : 0,
+        })),
+      });
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   return (
     <div>
       <PageHead kicker="Comparativo" title="Candidato contra candidato" />
