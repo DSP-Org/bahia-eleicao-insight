@@ -28,7 +28,7 @@ export function MapaBA({ fill, tooltip, onSelect, selected, height = 560 }: Prop
       const g = L.geoJSON(geo, {
         style: () => ({}),
         onEachFeature: (f, l: Layer) => {
-          const id = String(f.properties?.codarea);
+          const id = String(f.properties?.['codarea']);
           l.on("click", () => fns.current.onSelect?.(id));
           l.bindTooltip(() => fns.current.tooltip(id), { sticky: true });
         },
@@ -45,7 +45,7 @@ export function MapaBA({ fill, tooltip, onSelect, selected, height = 560 }: Prop
   function restyle() {
     layer.current?.eachLayer((l) => {
       const f = (l as unknown as { feature: GeoJSON.Feature }).feature;
-      const id = String(f.properties?.codarea);
+      const id = String(f.properties?.['codarea']);
       const sel = fns.current.selected === id;
       (l as unknown as { setStyle: (s: object) => void }).setStyle({
         fillColor: fns.current.fill(id), fillOpacity: 0.9, color: sel ? "#111" : "#fdfbf6", weight: sel ? 2.5 : 0.6,
