@@ -132,7 +132,7 @@ function Comparar() {
         <Card title="Quem venceu cada município (entre os escolhidos)">
           {md ? <MapaBA
             fill={(ibge) => { const m = byIbge[ibge]; const r = rows.find((x) => x.m.ibge === ibge); return m && r && r.vs[r.w] > 0 ? SERIES[r.w] : "#ddd"; }}
-            tooltip={(ibge) => { const r = rows.find((x) => x.m.ibge === ibge); return r ? `<b>${r.m.nome}</b><br/>` + cands.map((c, k) => `${c.nome}: ${pf(pct(r.vs[k], r.vv))}`).join("<br/>") : ""; }}
+            tooltip={(ibge) => { const r = rows.find((x) => x.m.ibge === ibge); return r ? `<b>${r.m.nome}</b><br/>` + cands.map((c, k) => `${c.nome}: <b>${nf(r.vs[k])}</b> votos · ${pf(pct(r.vs[k], r.vv))}`).join("<br/>") + `<br/><span style="opacity:.7">Votos válidos: ${nf(r.vv)}</span>` : ""; }}
             height={500} /> : <Loading />}
         </Card>
         <Card title="Maiores vantagens de cada um"
