@@ -78,10 +78,10 @@ function Comparar() {
           <div key={c.id} className="rounded-md border-t-4 bg-card p-4" style={{ borderColor: SERIES[k] }}>
             <Link to="/candidato/$id" params={{ id: c.id }} className="font-display text-xl font-bold hover:underline">{c.nome}</Link>
             <p className="text-sm text-muted-foreground">{c.partido} · {c.sit || c.situacao || "—"}</p>
-            <div className="mt-3 flex flex-wrap items-end gap-2">
-              <Stat label="Votos" value={<span className="text-base">{nf(c.votos)}</span>} />
-              <Stat label="%" value={<span className="text-base">{pf(c.pct)}</span>} />
-              <Stat label="Vence em" value={<span className="text-base">{wins[k]}</span>} sub="municípios" />
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <Stat label="Votos" value={nf(c.votos)} />
+              <Stat label="% válidos" value={pf(c.pct)} />
+              <Stat label="Vence em" value={nf(wins[k])} sub="municípios" />
             </div>
           </div>
         ))}
