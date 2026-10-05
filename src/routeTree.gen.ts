@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompararRouteImport } from './routes/comparar'
+import { Route as IndicadoresRouteImport } from './routes/indicadores'
 import { Route as MapaRouteImport } from './routes/mapa'
 import { Route as MetaXUrnaRouteImport } from './routes/meta-x-urna'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
@@ -26,6 +27,11 @@ const IndexRoute = IndexRouteImport.update({
 const CompararRoute = CompararRouteImport.update({
   id: '/comparar',
   path: '/comparar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IndicadoresRoute = IndicadoresRouteImport.update({
+  id: '/indicadores',
+  path: '/indicadores',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapaRoute = MapaRouteImport.update({
@@ -62,6 +68,7 @@ const MunicipioCodigoRoute = MunicipioCodigoRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/comparar': typeof CompararRoute
+  '/indicadores': typeof IndicadoresRoute
   '/mapa': typeof MapaRoute
   '/meta-x-urna': typeof MetaXUrnaRoute
   '/relatorios': typeof RelatoriosRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/comparar': typeof CompararRoute
+  '/indicadores': typeof IndicadoresRoute
   '/mapa': typeof MapaRoute
   '/meta-x-urna': typeof MetaXUrnaRoute
   '/relatorios': typeof RelatoriosRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/comparar': typeof CompararRoute
+  '/indicadores': typeof IndicadoresRoute
   '/mapa': typeof MapaRoute
   '/meta-x-urna': typeof MetaXUrnaRoute
   '/relatorios': typeof RelatoriosRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/comparar'
+    | '/indicadores'
     | '/mapa'
     | '/meta-x-urna'
     | '/relatorios'
@@ -105,6 +115,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/comparar'
+    | '/indicadores'
     | '/mapa'
     | '/meta-x-urna'
     | '/relatorios'
@@ -115,6 +126,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/comparar'
+    | '/indicadores'
     | '/mapa'
     | '/meta-x-urna'
     | '/relatorios'
@@ -126,6 +138,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CompararRoute: typeof CompararRoute
+  IndicadoresRoute: typeof IndicadoresRoute
   MapaRoute: typeof MapaRoute
   MetaXUrnaRoute: typeof MetaXUrnaRoute
   RelatoriosRoute: typeof RelatoriosRoute
@@ -148,6 +161,13 @@ declare module '@tanstack/react-router' {
       path: '/comparar'
       fullPath: '/comparar'
       preLoaderRoute: typeof CompararRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/indicadores': {
+      id: '/indicadores'
+      path: '/indicadores'
+      fullPath: '/indicadores'
+      preLoaderRoute: typeof IndicadoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mapa': {
@@ -198,6 +218,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CompararRoute: CompararRoute,
+  IndicadoresRoute: IndicadoresRoute,
   MapaRoute: MapaRoute,
   MetaXUrnaRoute: MetaXUrnaRoute,
   RelatoriosRoute: RelatoriosRoute,
