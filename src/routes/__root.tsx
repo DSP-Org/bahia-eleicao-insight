@@ -87,6 +87,7 @@ function RootShell({ children }: { children: ReactNode }) {
 const NAV = [
   { to: "/", label: "Início" },
   { to: "/mapa", label: "Mapa" },
+  { to: "/indicadores", label: "Indicadores" },
   { to: "/comparar", label: "Comparar" },
   { to: "/relatorios", label: "Relatórios" },
   { to: "/meta-x-urna", label: "Meta x Urna" },

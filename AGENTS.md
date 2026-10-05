@@ -16,4 +16,5 @@
 - A chosen name in any large pick-list doubles as the search field (BuscaItem's `selecionado`): clicking or typing on it reopens the suggestions, so changing a choice never needs a clear button first.
 - Indicator numbers and labels size themselves with their own box through container-query clamps instead of fixed text classes, because the same Stat renders in grids from 2 to 5 columns and fixed sizes either wrap a number mid-digit or overflow the cell.
 - Cross-office comparisons present absolute votes and within-office percentages as separate readings, because raw totals alone are not comparable across contests with different valid-vote pools.
+- The indicators page derives its cards through a pure calculation module from the static snapshots, labels vote denominators and separates projected from official winners; this keeps statistics testable and avoids conflating Senate votes with voters.
 
