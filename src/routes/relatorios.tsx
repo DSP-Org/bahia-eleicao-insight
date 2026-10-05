@@ -296,7 +296,7 @@ function Campo({
   largo?: boolean;
 }) {
   return (
-    <label className={`flex flex-col gap-1 ${largo ? "w-full md:w-80" : ""}`}>
+    <label className={`flex min-w-0 max-w-full flex-col gap-1 ${largo ? "w-full md:w-80" : "w-full sm:w-auto"}`}>
       <span className="text-xs uppercase tracking-wider text-muted-foreground">{rotulo}</span>
       {children}
     </label>

@@ -83,18 +83,18 @@ function CargoPage() {
         </Card>
         <Card title="Por partido" action={<Btn onClick={() => downloadCSV(`partidos-${slug}.csv`, [["Partido", "Votos", "Candidatos", "Eleitos"], ...partidos.map((p) => [p.sg, p.votos, p.cands, p.eleitos])])}>CSV</Btn>}>
           <div className="max-h-[480px] overflow-auto">
-            <table className="w-full text-sm">
+            <table className="mobile-records w-full text-sm">
               <thead className="sticky top-0 bg-card text-left text-xs uppercase text-muted-foreground">
                 <tr><th className="py-1">Partido</th><th className="text-right">Votos</th><th className="text-right">%</th><th className="text-right">Cands.</th><th className="text-right">Eleitos</th></tr>
               </thead>
               <tbody>
                 {partidos.map((p) => (
                   <tr key={p.sg} className="border-t border-border">
-                    <td className="py-1.5"><span className="mr-2 inline-block h-3 w-3 rounded-sm align-middle" style={{ background: partyColor(p.sg) }} />{p.sg}</td>
-                    <td className="text-right font-mono">{nf(p.votos)}</td>
-                    <td className="text-right font-mono">{pf(pct(p.votos, r.validos))}</td>
-                    <td className="text-right font-mono">{p.cands}</td>
-                    <td className="text-right font-mono font-semibold">{p.eleitos || ""}</td>
+                    <td data-label="Partido" className="record-title py-1.5"><span className="mr-2 inline-block h-3 w-3 rounded-sm align-middle" style={{ background: partyColor(p.sg) }} />{p.sg}</td>
+                    <td data-label="Votos" className="text-right font-mono">{nf(p.votos)}</td>
+                    <td data-label="% válidos" className="text-right font-mono">{pf(pct(p.votos, r.validos))}</td>
+                    <td data-label="Candidatos" className="text-right font-mono">{p.cands}</td>
+                    <td data-label="Eleitos" className="text-right font-mono font-semibold">{p.eleitos || ""}</td>
                   </tr>
                 ))}
               </tbody>
@@ -105,27 +105,27 @@ function CargoPage() {
 
       <div className="mt-5">
         <Card title="Todos os candidatos" action={
-          <div className="flex gap-2">
-            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nome, partido, número" className="rounded-md border border-input bg-background px-3 py-1.5 text-sm" />
+          <div className="flex min-w-0 flex-wrap gap-2">
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nome, partido, número" aria-label="Buscar candidatos" className="w-full min-w-0 sm:w-auto rounded-md border border-input bg-background px-3 py-1.5 text-sm" />
             <Btn onClick={() => setSort(sort === "votos" ? "nome" : "votos")}>Ordenar: {sort}</Btn>
             <Btn onClick={() => downloadCSV(`candidatos-${slug}.csv`, [["Nome", "Número", "Partido", "Coligação", "Votos", "%", "Situação"], ...cargo.candidatos.map((c) => [c.nome, c.n, c.partido, c.agr, c.votos, c.pct, c.sit || c.situacao])])}>CSV</Btn>
           </div>}>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="mobile-records w-full text-sm">
               <thead className="text-left text-xs uppercase text-muted-foreground">
-                <tr><th className="py-1">#</th><th>Candidato</th><th>Nº</th><th>Partido</th><th className="hidden md:table-cell">Coligação/Federação</th><th className="text-right">Votos</th><th className="text-right">%</th><th>Situação</th></tr>
+                <tr><th className="py-1">#</th><th>Candidato</th><th>Nº</th><th>Partido</th><th className="hidden lg:table-cell">Coligação/Federação</th><th className="text-right">Votos</th><th className="text-right">%</th><th>Situação</th></tr>
               </thead>
               <tbody>
                 {list.slice(0, 300).map((c, i) => (
                   <tr key={c.id} className="border-t border-border">
-                    <td className="py-1.5 font-mono text-muted-foreground">{i + 1}</td>
-                    <td><Link to="/candidato/$id" params={{ id: c.id }} className="font-medium hover:underline">{c.nome}</Link></td>
-                    <td className="font-mono">{c.n}</td>
-                    <td>{c.partido}</td>
-                    <td className="hidden max-w-xs truncate text-muted-foreground md:table-cell">{c.agr}</td>
-                    <td className="text-right font-mono">{nf(c.votos)}</td>
-                    <td className="text-right font-mono">{pf(c.pct)}</td>
-                    <td className={c.eleito || c.sitTipo === "eleito" ? "font-semibold text-primary" : "text-muted-foreground"}>{c.sit || c.situacao || (c.valido !== "Válido" ? c.valido : "")}</td>
+                    <td data-label="Posição" className="mobile-omit py-1.5 font-mono text-muted-foreground">{i + 1}</td>
+                    <td data-label="Candidato" className="record-title"><Link to="/candidato/$id" params={{ id: c.id }} className="font-medium hover:underline">{c.nome}</Link></td>
+                    <td data-label="Número" className="font-mono">{c.n}</td>
+                    <td data-label="Partido">{c.partido}</td>
+                    <td data-label="Coligação/Federação" className="mobile-omit hidden max-w-xs truncate text-muted-foreground lg:table-cell">{c.agr}</td>
+                    <td data-label="Votos" className="text-right font-mono">{nf(c.votos)}</td>
+                    <td data-label="% válidos" className="text-right font-mono">{pf(c.pct)}</td>
+                    <td data-label="Situação" className={c.eleito || c.sitTipo === "eleito" ? "font-semibold text-primary" : "text-muted-foreground"}>{c.sit || c.situacao || (c.valido !== "Válido" ? c.valido : "")}</td>
                   </tr>
                 ))}
               </tbody>

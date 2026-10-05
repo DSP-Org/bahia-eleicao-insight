@@ -51,9 +51,9 @@ function CandPage() {
   const List = ({ items }: { items: typeof rows }) => (
     <ol className="space-y-1 text-sm">
       {items.map(({ m, v, p }) => (
-        <li key={m.tse} className="flex justify-between gap-2 border-b border-border py-1">
+        <li key={m.tse} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border py-1">
           <Link to="/municipio/$codigo" params={{ codigo: m.tse }} className="hover:underline">{m.nome}</Link>
-          <span className="font-mono">{pf(p)} · {nf(v)}</span>
+          <span className="shrink-0 whitespace-nowrap font-mono">{pf(p)} · {nf(v)}</span>
         </li>
       ))}
     </ol>
@@ -84,7 +84,7 @@ function CandPage() {
         <Card title="Por região intermediária (IBGE)">
           <ul className="space-y-2 text-sm">
             {regioes.map((r) => (
-              <li key={r.n}><div className="flex justify-between"><span>{r.n}</span><span className="font-mono">{pf(r.p)}</span></div><Bar value={(r.p / (regioes[0]?.p || 1)) * 100} color={color} /></li>
+              <li key={r.n}><div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2"><span>{r.n}</span><span className="font-mono">{pf(r.p)}</span></div><Bar value={(r.p / (regioes[0]?.p || 1)) * 100} color={color} /></li>
             ))}
           </ul>
         </Card>

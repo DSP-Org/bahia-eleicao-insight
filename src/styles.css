@@ -153,3 +153,42 @@
 }
 
 .leaflet-container { background: var(--color-muted); font-family: var(--font-sans); }
+
+/* Keep grid tracks shrinkable without hiding content or masking overflow. */
+main .grid > *, main section, main input { min-width: 0; }
+main { overflow-wrap: break-word; }
+
+@media (max-width: 639px) {
+  input, select, textarea { font-size: 16px !important; }
+  .election-map { height: 380px !important; }
+  .mobile-records, .mobile-records tbody { display: block; width: 100%; }
+  .mobile-records thead { display: none; }
+  .mobile-records tbody { display: grid; gap: 12px; }
+  .mobile-records tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .mobile-records td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .mobile-records td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 3px;
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--muted-foreground);
+  }
+  .mobile-records td.record-title { grid-column: 1 / -1; font-weight: 600; }
+  .mobile-records td.mobile-omit { display: none; }
+}

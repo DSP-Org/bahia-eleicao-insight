@@ -53,12 +53,12 @@ function Comparar() {
           {CARGOS.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}
         </Select>
         {[0, 1, 2, 3].map((k) => (k <= sel.length && k < 4) && (
-          <div key={k} className="flex min-w-56 flex-1 items-center gap-1 md:flex-none">
+          <div key={k} className="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:flex-1 md:flex-none">
             <span className="inline-block h-3 w-3 shrink-0 rounded-sm" style={{ background: SERIES[k] }} />
-            <div className="w-56">
+            <div className="min-w-0 flex-1 sm:w-56">
               {sel[k] && cargo.candidatos.some((c) => c.id === sel[k]) ? (
                 <div className="flex items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm">
-                  <span className="truncate font-medium">{cargo.candidatos.find((c) => c.id === sel[k])!.nome}</span>
+                  <span className="truncate font-medium">{cargo.candidatos.find((c) => c.id === sel[k])?.nome}</span>
                   <button aria-label="Trocar candidato" onClick={() => setAt(k, "")} className="text-muted-foreground hover:text-foreground">×</button>
                 </div>
               ) : (
@@ -81,7 +81,7 @@ function Comparar() {
           <div key={c.id} className="rounded-md border-t-4 bg-card p-4" style={{ borderColor: SERIES[k] }}>
             <Link to="/candidato/$id" params={{ id: c.id }} className="font-display text-xl font-bold hover:underline">{c.nome}</Link>
             <p className="text-sm text-muted-foreground">{c.partido} · {c.sit || c.situacao || "—"}</p>
-            <div className="mt-3 grid grid-cols-3 gap-2">
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
               <Stat label="Votos" value={<span className="text-base">{nf(c.votos)}</span>} />
               <Stat label="%" value={<span className="text-base">{pf(c.pct)}</span>} />
               <Stat label="Vence em" value={<span className="text-base">{wins[k]}</span>} sub="municípios" />
@@ -100,11 +100,11 @@ function Comparar() {
         <Card title={cands.length > 1 ? `Maiores diferenças (${cands[0].nome} − ${cands[1].nome})` : "Diferenças"}
           action={<Btn onClick={() => downloadCSV(`comparativo-${slug}.csv`, [["Município", ...cands.map((c) => c.nome)], ...rows.map((r) => [r.m.nome, ...r.vs])])}>CSV</Btn>}>
           {cands.length > 1 && (
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid gap-4 text-sm sm:grid-cols-2">
               {[[...rows].sort((a, b) => b.diff - a.diff), [...rows].sort((a, b) => a.diff - b.diff)].map((l, k) => (
                 <div key={k}>
                   <p className="mb-1 text-xs font-semibold" style={{ color: SERIES[k] }}>Vantagem {cands[k].nome}</p>
-                  <ol className="space-y-1">{l.slice(0, 15).map((r) => <li key={r.m.tse} className="flex justify-between border-b border-border"><span className="truncate">{r.m.nome}</span><span className="font-mono">{nf(Math.abs(r.diff))}</span></li>)}</ol>
+                  <ol className="space-y-1">{l.slice(0, 15).map((r) => <li key={r.m.tse} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border"><span className="truncate">{r.m.nome}</span><span className="font-mono">{nf(Math.abs(r.diff))}</span></li>)}</ol>
                 </div>
               ))}
             </div>

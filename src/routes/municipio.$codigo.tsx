@@ -48,20 +48,20 @@ function MunPage() {
           const top = Object.entries(r.v).sort((a, b) => b[1] - a[1]).slice(0, c.vagas > 2 ? 10 : 6);
           return (
             <Card key={c.slug} title={c.nome}>
-              <table className="w-full text-sm">
+              <table className="mobile-records w-full text-sm">
                 <thead className="text-left text-xs uppercase text-muted-foreground"><tr><th>Candidato</th><th className="text-right">Votos</th><th className="text-right">%</th><th className="text-right">Bahia</th></tr></thead>
                 <tbody>
                   {top.map(([k, v]) => {
                     const cand = c.candidatos[+k]; const p = pct(v, r.vv);
                     return (
                       <tr key={k} className="border-t border-border">
-                        <td className="py-1.5">
+                        <td data-label="Candidato" className="record-title py-1.5">
                           <Link to="/candidato/$id" params={{ id: cand.id }} className="hover:underline">{cand.nome}</Link> <span className="text-muted-foreground">({cand.partido})</span>
                           <Bar value={p} color={partyColor(cand.partido)} />
                         </td>
-                        <td className="text-right font-mono">{nf(v)}</td>
-                        <td className="text-right font-mono">{pf(p)}</td>
-                        <td className={`text-right font-mono ${p > cand.pct ? "text-primary" : "text-muted-foreground"}`}>{pf(cand.pct)}</td>
+                        <td data-label="Votos" className="text-right font-mono">{nf(v)}</td>
+                        <td data-label="% no município" className="text-right font-mono">{pf(p)}</td>
+                        <td data-label="% na Bahia" className={`text-right font-mono ${p > cand.pct ? "text-primary" : "text-muted-foreground"}`}>{pf(cand.pct)}</td>
                       </tr>
                     );
                   })}

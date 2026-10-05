@@ -60,7 +60,7 @@ function Index() {
               <ul className="space-y-3">
                 {top.map((k) => (
                   <li key={k.id}>
-                    <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <div className="grid min-w-0 gap-1 text-sm sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-2">
                       <Link to="/candidato/$id" params={{ id: k.id }} className="font-semibold hover:underline">
                         {k.nome} <span className="font-normal text-muted-foreground">({k.partido})</span>
                         {(k.eleito || k.sitTipo === "eleito") && <span className="ml-2 rounded bg-primary px-1.5 py-0.5 text-[10px] uppercase text-primary-foreground" title={k.proj ? "Projeção: o TSE ainda não publicou a lista de eleitos" : undefined}>{k.proj ? "eleito (projeção)" : "eleito"}</span>}
