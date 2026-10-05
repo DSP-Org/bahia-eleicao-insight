@@ -4,12 +4,17 @@ export type GrupoIndicador = "participacao" | "votos" | "disputa" | "territorio"
 export type Indicador = { label: string; value: string; detail: string; textual?: boolean };
 export type SecaoIndicadores = { id: GrupoIndicador; title: string; cards: Indicador[] };
 
-export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: MunData, candidatoId: string): SecaoIndicadores[] {
+export type TipoRecorte = "ba" | "ri" | "rim" | "ti" | "mun";
+/** `tipo` indica o recorte: cartões que ficariam triviais nele (ex.: maior = menor numa só cidade) são omitidos. */
+export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: MunData, candidatoId: string, tipo: TipoRecorte = "ba"): SecaoIndicadores[] {
+  const noEstado = tipo === "ba";
+  const onde = noEstado ? "na Bahia" : "no recorte";
   const r = cargo.resumo;
   const candidatos = [...cargo.candidatos].sort((a, b) => b.votos - a.votos);
   const primeiro = candidatos[0];
   const segundo = candidatos[1];
   const candidato = cargo.candidatos.find((c) => c.id === candidatoId) ?? primeiro;
+  const varias = municipios.length > 1;
   const indice = candidato ? cargo.candidatos.findIndex((c) => c.id === candidato.id) : -1;
   const linhas = municipios.flatMap((municipio) => {
     const resultado = dados[municipio.tse];
@@ -26,7 +31,7 @@ export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: M
     const ordenadas = linhas.filter(elegivel).sort((a, b) => valor(b) - valor(a));
     const maior = ordenadas[0];
     const menor = ordenadas.at(-1);
-    return maior && menor ? [card(`Maior ${label}`, formato(valor(maior)), maior.municipio.nome), card(`Menor ${label}`, formato(valor(menor)), menor.municipio.nome)] : [];
+    return maior && menor && ordenadas.length > 1 && valor(maior) !== valor(menor) ? [card(`Maior ${label}`, formato(valor(maior)), maior.municipio.nome), card(`Menor ${label}`, formato(valor(menor)), menor.municipio.nome)] : [];
   };
   const nominal = cargo.candidatos.reduce((s, c) => s + c.votos, 0);
   const legenda = cargo.partidos.reduce((s, p) => s + p.legenda, 0);
@@ -68,55 +73,57 @@ export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: M
       card("Taxa de brancos", pf(pct(r.brancos, r.total)), "Brancos ÷ total de votos"),
       card("Taxa de nulos", pf(pct(r.nulos, r.total)), "Nulos ÷ total de votos"),
       card("Votos nominais listados", nominal, "Soma dos votos dos candidatos"),
-      ...(proporcionais ? [card("Votos de legenda", legenda, "Soma da legenda dos partidos"), card("Legenda entre os válidos", pf(pct(legenda, r.validos)), "Legenda ÷ votos válidos"), card("Quociente eleitoral", cargo.qe, `Referência para ${nf(cargo.vagas)} vagas`)] : []),
+      ...(proporcionais ? [card("Votos de legenda", legenda, "Soma da legenda dos partidos"), card("Legenda entre os válidos", pf(pct(legenda, r.validos)), "Legenda ÷ votos válidos"), ...(noEstado ? [card("Quociente eleitoral", cargo.qe, `Referência para ${nf(cargo.vagas)} vagas`)] : [])] : []),
       ...extremos("taxa de brancos", (l) => pct(l.resultado.vb, l.total), pf, (l) => l.total > 0),
       ...extremos("taxa de nulos", (l) => pct(l.resultado.vn, l.total), pf, (l) => l.total > 0),
     ] },
     { id: "disputa", title: "Candidatos e partidos", cards: [
       card("Candidatos listados", candidatos.length, cargo.nome),
-      card("Candidatos com votos", candidatos.filter((c) => c.votos > 0).length, "Ao menos um voto no estado"),
+      card("Candidatos com votos", candidatos.filter((c) => c.votos > 0).length, `Ao menos um voto ${onde}`),
       card("Candidatos sem votos", candidatos.filter((c) => c.votos === 0).length, "Zero votos no resultado"),
       card("Partidos listados", cargo.partidos.length, "Partidos presentes neste cargo"),
-      card("Vagas em disputa", cargo.vagas, cargo.slug === "presidente" ? "Disputa nacional; votos exibidos da BA" : "Vagas referentes à Bahia"),
-      card("Eleitos oficiais", oficiais.length, "Somente situação oficial, sem projeções"),
+      card("Vagas em disputa", cargo.vagas, cargo.slug === "presidente" ? "Disputa nacional; votos exibidos da BA" : "Vagas referentes à Bahia" + (noEstado ? "" : " (estado inteiro)")),
+      card("Eleitos oficiais", oficiais.length, noEstado ? "Somente situação oficial, sem projeções" : "Resultado estadual, não do recorte"),
       ...(projetados.length ? [card("Eleitos por projeção", projetados.length, "Estimativa; não é confirmação do TSE")] : []),
       ...(proporcionais ? [card("Candidatos por vaga", (candidatos.length / cargo.vagas).toLocaleString("pt-BR", { maximumFractionDigits: 1 }), "Candidatos listados ÷ vagas")] : []),
-      ...(primeiro ? [card("Mais votado na Bahia", primeiro.nome, `${nf(primeiro.votos)} votos · ${pf(primeiro.pct)}`, true), card("Votos do 1º colocado", primeiro.votos, primeiro.nome)] : []),
+      ...(primeiro ? [card(`Mais votado ${onde}`, primeiro.nome, `${nf(primeiro.votos)} votos · ${pf(primeiro.pct)}`, true), card("Votos do 1º colocado", primeiro.votos, primeiro.nome)] : []),
       ...(segundo ? [card("Votos do 2º colocado", segundo.votos, segundo.nome), card("Distância entre 1º e 2º", (primeiro?.votos ?? 0) - segundo.votos, "Diferença em votos; não define eleição")] : []),
       card("Concentração no top 3", pf(pct(top3, r.validos)), `${nf(top3)} votos dos três mais votados`),
       ...(candidatos.length > 10 ? [card("Concentração no top 10", pf(pct(top10, r.validos)), `${nf(top10)} votos dos dez mais votados`)] : []),
       ...(partido ? [card("Partido mais votado", partido.sg, `${nf(partido.votosTot)} votos nominais + legenda`, true)] : []),
     ] },
     { id: "territorio", title: "Retrato dos municípios", cards: [
-      card("Municípios", municipios.length, "Municípios no recorte escolhido"),
-      card("Municípios com resultado", linhas.length, "Resultado disponível para este cargo"),
-      card("Territórios de identidade", new Set(municipios.map((m) => m.ti).filter(Boolean)).size, "Territórios presentes no cadastro"),
-      card("Regiões imediatas", new Set(municipios.map((m) => m.rim).filter(Boolean)).size, "Divisão regional do IBGE"),
-      card("Regiões intermediárias", new Set(municipios.map((m) => m.ri).filter(Boolean)).size, "Divisão regional do IBGE"),
-      card("Candidatos líderes locais", lideres.size, "1º lugar isolado em ao menos uma cidade"),
-      card("Empates na liderança", linhas.filter((l) => l.empate).length, "Empate em votos entre os primeiros"),
-      card("Disputas até 100 votos", margens.filter((l) => l.margem <= 100).length, "Distância entre os dois primeiros"),
-      card("Disputas até 1 ponto", margens.filter((l) => pct(l.margem, l.resultado.vv) <= 1).length, "Até 1 ponto percentual entre 1º e 2º"),
+      ...(varias ? [card("Municípios", municipios.length, noEstado ? "Todos os municípios da Bahia" : "Municípios no recorte escolhido"),
+      card("Municípios com resultado", linhas.length, "Resultado disponível para este cargo")] : []),
+      ...[["ti", "Territórios de identidade", "Territórios presentes no recorte"], ["rim", "Regiões imediatas", "Divisão regional do IBGE"], ["ri", "Regiões intermediárias", "Divisão regional do IBGE"]].flatMap(([k, label, det]) => {
+        const n = new Set(municipios.map((m) => (m as Record<string, unknown>)[k as string]).filter(Boolean)).size;
+        return n > 1 ? [card(label as string, n, det as string)] : [];
+      }),
+      ...(varias ? [card("Candidatos líderes locais", lideres.size, "1º lugar isolado em ao menos uma cidade"),
+      card("Empates na liderança", linhas.filter((l) => l.empate).length, "Empate em votos entre os primeiros")] : []),
+      ...(varias ? [card("Disputas até 100 votos", margens.filter((l) => l.margem <= 100).length, "Municípios com 1º e 2º separados por até 100 votos"),
+      card("Disputas até 1 ponto", margens.filter((l) => pct(l.margem, l.resultado.vv) <= 1).length, "Municípios com até 1 ponto entre 1º e 2º")]
+      : margens[0] ? [card("Vantagem do 1º sobre o 2º", margens[0].margem, `${pf(pct(margens[0].margem, margens[0].resultado.vv))} dos válidos`)] : []),
       ...extremos("eleitorado", (l) => l.resultado.el, nf),
       ...extremos("volume de válidos", (l) => l.resultado.vv, nf),
       ...extremos("vantagem local", (l) => l.margem, nf, (l) => Boolean(l.top && l.top.votos > 0)),
     ] },
     { id: "candidato", title: "Raio-x do candidato", cards: candidato ? [
-      card("Votos na Bahia", candidato.votos, candidato.nome),
+      card(`Votos ${onde}`, candidato.votos, candidato.nome),
       card("Percentual dos válidos", pf(candidato.pct), `Dentro de ${cargo.nome}`),
       card("Posição em votos", `${candidatos.findIndex((c) => c.id === candidato.id) + 1}º`, `Entre ${nf(candidatos.length)} candidatos`),
       card("Situação", candidato.sit || candidato.situacao || "Não informada", candidato.proj ? "Projeção; não confirmada pelo TSE" : "Situação registrada no resultado", true),
-      card("Municípios com votos", presenca.length, `${pf(pct(presenca.length, linhas.length))} dos municípios com resultado`),
+      ...(varias ? [card("Municípios com votos", presenca.length, `${pf(pct(presenca.length, linhas.length))} dos municípios com resultado`),
       card("Municípios sem votos", linhas.length - presenca.length, "Municípios com resultado e zero voto"),
       card("Lideranças municipais", liderancas.length, "1º lugar isolado em votos nominais"),
-      card("Entre os 3 mais votados", linhas.filter((l) => l.votos > 0 && l.ranking.filter((i) => i.votos > l.votos).length < 3).length, "Posição por votos, incluindo empates"),
-      card("Acima de 50%", linhas.filter((l) => l.percentual > 50).length, "Mais da metade dos válidos locais"),
-      card("Acima de 25%", linhas.filter((l) => l.percentual > 25).length, "Mais de um quarto dos válidos locais"),
-      card("Top 5 cidades nos votos", pf(pct(top5Local, candidato.votos)), `${nf(top5Local)} votos concentrados em cinco cidades`),
-      card("Média por município", nf(Math.round(linhas.reduce((s, l) => s + l.votos, 0) / (linhas.length || 1))), "Média de votos nos municípios com resultado"),
+      card("Entre os 3 mais votados", linhas.filter((l) => l.votos > 0 && l.ranking.filter((i) => i.votos > l.votos).length < 3).length, "Municípios, incluindo empates"),
+      card("Acima de 50%", linhas.filter((l) => l.percentual > 50).length, "Municípios com mais da metade dos válidos"),
+      card("Acima de 25%", linhas.filter((l) => l.percentual > 25).length, "Municípios com mais de um quarto dos válidos"),
+      ...(presenca.length > 5 ? [card("Top 5 cidades nos votos", pf(pct(top5Local, candidato.votos)), `${nf(top5Local)} votos concentrados em cinco cidades`)] : []),
+      card("Média por município", nf(Math.round(linhas.reduce((s, l) => s + l.votos, 0) / (linhas.length || 1))), "Média de votos nos municípios com resultado")] : []),
       ...extremos("votação do candidato", (l) => l.votos, nf, (l) => l.votos > 0),
       ...extremos("força percentual", (l) => l.percentual, pf, (l) => l.votos > 0 && l.resultado.vv > 0),
-      ...(regiao ? [card("Região com mais votos", regiao[0], `${nf(regiao[1])} votos · região intermediária`, true)] : []),
+      ...(regiao && regioes.size > 1 ? [card("Região com mais votos", regiao[0], `${nf(regiao[1])} votos · região intermediária`, true)] : []),
     ] : [] },
   ];
 }

@@ -4,7 +4,7 @@ import { createIsomorphicFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { ArrowUpRight, Search, Users, Vote, Trophy, MapPin, UserRound, LayoutGrid, type LucideIcon } from "lucide-react";
 import { CARGOS, slugify, type Meta, type Municipio, type MunData } from "@/lib/eleicoes";
-import { criarIndicadores, recortarCargo, type GrupoIndicador } from "@/lib/indicadores";
+import { criarIndicadores, recortarCargo, type GrupoIndicador, type TipoRecorte } from "@/lib/indicadores";
 import { PageHead, Select } from "@/components/ui-bits";
 import { Button } from "@/components/ui/button";
 import { BuscaItem } from "@/components/relatorios/BuscaItem";
@@ -77,8 +77,8 @@ function Indicadores() {
   const [recorte, setRecorte] = useState("ba");
   const recortes = useMemo(() => [
     { v: "ba", nome: "Bahia inteira", grupo: "" },
-    ...[...new Set(municipios.map((m) => m.ri))].sort().map((n) => ({ v: `ri:${n}`, nome: n, grupo: "Região intermediária" })),
-    ...[...new Set(municipios.map((m) => m.rim))].sort().map((n) => ({ v: `rim:${n}`, nome: n, grupo: "Região imediata" })),
+    ...[...new Set(municipios.map((m) => m.ri).filter(Boolean) as string[])].sort().map((n) => ({ v: `ri:${n}`, nome: n, grupo: "Região intermediária" })),
+    ...[...new Set(municipios.map((m) => m.rim).filter(Boolean) as string[])].sort().map((n) => ({ v: `rim:${n}`, nome: n, grupo: "Região imediata" })),
     ...[...new Set(municipios.map((m) => m.ti).filter(Boolean) as string[])].sort().map((n) => ({ v: `ti:${n}`, nome: n, grupo: "Território de identidade" })),
     ...municipios.map((m) => ({ v: `mun:${m.tse}`, nome: m.nome, grupo: "Município" })),
   ], [municipios]);
@@ -90,8 +90,10 @@ function Indicadores() {
   }, [recorte, municipios]);
   const cargoBase = meta.cargos.find((c) => c.slug === slug) ?? meta.cargos[0];
   const cargo = useMemo(() => cargoBase && recorte !== "ba" ? recortarCargo(cargoBase, munsRecorte, dados[cargoBase.slug] ?? {}) : cargoBase, [cargoBase, recorte, munsRecorte, dados]);
-  const candidato = cargo?.candidatos.find((c) => c.id === candidatoId) ?? cargo?.candidatos[0];
-  const secoes = useMemo(() => cargo ? criarIndicadores(cargo, munsRecorte, dados[cargo.slug] ?? {}, candidato?.id ?? "") : [], [cargo, munsRecorte, dados, candidato]);
+  // Default raio-x candidate is the most voted inside the current cut, not the first listed.
+  const candidato = cargo?.candidatos.find((c) => c.id === candidatoId) ?? (cargo ? [...cargo.candidatos].sort((a, b) => b.votos - a.votos)[0] : undefined);
+  const tipoRecorte = (recorte === "ba" ? "ba" : recorte.split(":")[0]) as TipoRecorte;
+  const secoes = useMemo(() => cargo ? criarIndicadores(cargo, munsRecorte, dados[cargo.slug] ?? {}, candidato?.id ?? "", tipoRecorte) : [], [cargo, munsRecorte, dados, candidato, tipoRecorte]);
   const termo = slugify(busca.trim());
   const filtradas = secoes.map((s) => ({ ...s, cards: s.cards.filter((c) => slugify(`${c.label} ${c.value} ${c.detail}`).includes(termo)) })).filter((s) => s.cards.length);
   const contagem = (id: "todos" | GrupoIndicador) => filtradas.filter((s) => id === "todos" || s.id === id).reduce((t, s) => t + s.cards.length, 0);
@@ -122,7 +124,7 @@ function Indicadores() {
         </div>
         {mostraCandidato && <div className="grid min-w-0 gap-1.5">
           <p className="text-xs font-semibold text-muted-foreground">Candidato do raio-x</p>
-          <BuscaItem key={slug} itens={cargo.candidatos} busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)} render={(c) => <span>{c.nome} · {c.partido}</span>} onEscolher={(c) => setCandidatoId(c.id)} placeholder="Nome, partido ou número…" rotulo="Buscar candidato dos indicadores" selecionado={candidato ?? null} />
+          <BuscaItem key={slug} itens={cargo.candidatos} busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)} render={(c) => <span>{c.nome} · {c.partido}{recorte !== "ba" && <span className="text-muted-foreground"> · {c.votos.toLocaleString("pt-BR")} votos</span>}</span>} onEscolher={(c) => setCandidatoId(c.id)} placeholder="Nome, partido ou número…" rotulo="Buscar candidato dos indicadores" selecionado={candidato ?? null} />
         </div>}
         <label className={`grid min-w-0 gap-1.5 ${mostraCandidato ? "" : "sm:col-span-2 lg:col-span-1"}`}>
           <span className="text-xs font-semibold text-muted-foreground">Buscar indicador</span>
