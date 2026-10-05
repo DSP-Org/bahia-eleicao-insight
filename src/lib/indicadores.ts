@@ -91,8 +91,8 @@ export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: M
       card("Municípios", municipios.length, "Municípios da Bahia no cadastro"),
       card("Municípios com resultado", linhas.length, "Resultado disponível para este cargo"),
       card("Territórios de identidade", new Set(municipios.map((m) => m.ti).filter(Boolean)).size, "Territórios presentes no cadastro"),
-      card("Regiões imediatas", new Set(municipios.map((m) => m.ri).filter(Boolean)).size, "Divisão regional do IBGE"),
-      card("Regiões intermediárias", new Set(municipios.map((m) => m.rim).filter(Boolean)).size, "Divisão regional do IBGE"),
+      card("Regiões imediatas", new Set(municipios.map((m) => m.rim).filter(Boolean)).size, "Divisão regional do IBGE"),
+      card("Regiões intermediárias", new Set(municipios.map((m) => m.ri).filter(Boolean)).size, "Divisão regional do IBGE"),
       card("Candidatos líderes locais", lideres.size, "1º lugar isolado em ao menos uma cidade"),
       card("Empates na liderança", linhas.filter((l) => l.empate).length, "Empate em votos entre os primeiros"),
       card("Disputas até 100 votos", margens.filter((l) => l.margem <= 100).length, "Distância entre os dois primeiros"),
@@ -116,7 +116,7 @@ export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: M
       card("Média por município", nf(Math.round(linhas.reduce((s, l) => s + l.votos, 0) / (linhas.length || 1))), "Média de votos nos municípios com resultado"),
       ...extremos("votação do candidato", (l) => l.votos, nf, (l) => l.votos > 0),
       ...extremos("força percentual", (l) => l.percentual, pf, (l) => l.votos > 0 && l.resultado.vv > 0),
-      ...(regiao ? [card("Região com mais votos", regiao[0], `${nf(regiao[1])} votos · região imediata`, true)] : []),
+      ...(regiao ? [card("Região com mais votos", regiao[0], `${nf(regiao[1])} votos · região intermediária`, true)] : []),
     ] : [] },
   ];
 }
