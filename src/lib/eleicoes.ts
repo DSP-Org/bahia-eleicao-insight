@@ -4,19 +4,33 @@ export type Resumo = {
   secTot: number; pst: number; eleitores: number; comp: number; abst: number;
   validos: number; brancos: number; nulos: number; total: number; hora: string;
 };
+export type SitTipo = "eleito" | "suplente" | "nao_eleito" | "segundo_turno" | "aguardando";
 export type Candidato = {
   id: string; n: string; nome: string; nomeCompleto: string; partido: string;
   agr: string; agrCom: string; fed: string; votos: number; pct: number;
   situacao: string; eleito: boolean; valido: string; vice: string[];
+  // Gerados por scripts/gerar-dados.mjs. `sit` é a situação a exibir: a oficial do TSE quando existe;
+  // senão a projeção (Dep. Estadual, enquanto o TSE não publica a lista) ou "2º turno".
+  agrId?: string; sit?: string; sitTipo?: SitTipo; proj?: boolean;
+  ordem?: number | null; faltou?: number | null; margem?: number | null;
 };
 export type Partido = { sg: string; n: string; nm: string; fed: string; agr: string; votosTot: number; legenda: number };
+export type Agremiacao = {
+  id: string; nome: string; sigla: string; tipo: string; vagas: number; qp: number;
+  nominal: number; legenda: number; total: number; pct: number; partidos: string[];
+};
+export type Parcial = { municipio: string; tse: string; pst: number; hora: string };
 export type Cargo = {
   cd: string; slug: string; nome: string; vagas: number; qe: number; resumo: Resumo;
   candidatos: Candidato[]; partidos: Partido[]; federacoes: Record<string, string>;
+  totalizacaoFinal?: boolean; parciais?: Parcial[]; agremiacoes?: Agremiacao[];
 };
-export type Meta = { cargos: Cargo[] };
-export type Municipio = { tse: string; ibge: string; nome: string; ri: string; rim: string };
-export type MunRes = { el: number; co: number; ab: number; vv: number; vb: number; vn: number; pst: number; v: Record<string, number> };
+export type Meta = { cargos: Cargo[]; geradoEm?: string; validacao?: { projecaoFederal: { oficiais: number; coincidentes: number }; avisos: string[] } };
+export type Municipio = { tse: string; ibge: string; nome: string; ri: string; rim: string; ti?: string };
+export type MunRes = {
+  el: number; co: number; ab: number; vv: number; vb: number; vn: number; pst: number; v: Record<string, number>;
+  tv?: number; l?: Record<string, number>; // total de votos do cargo e votos de legenda por número do partido
+};
 export type MunData = Record<string, MunRes | null>;
 
 const j = <T,>(u: string) => () => fetch(u).then((r) => { if (!r.ok) throw new Error("Falha ao carregar dados"); return r.json() as Promise<T>; });

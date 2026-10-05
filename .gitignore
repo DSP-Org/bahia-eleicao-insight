@@ -30,3 +30,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.dyad/
+
+# cache dos downloads do TSE (scripts/gerar-dados.mjs)
+.cache/
