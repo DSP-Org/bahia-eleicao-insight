@@ -4,3 +4,4 @@
 - [x] Verify downloaded PDF pages visually and report export end-to-end.
 - [x] Adapt all pages and wide tables for phones.
 - [x] Verify mobile navigation, searches, reports and desktop tables.
+- [x] Add same-office and cross-office comparison tabs with improved candidate cards.
