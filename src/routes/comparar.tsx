@@ -24,6 +24,7 @@ function Comparar() {
   const { data: meta } = useMeta();
   const cargo = meta?.cargos.find((c) => c.slug === slug);
   const [ids, setIds] = useState<string[]>([]);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const { data: md } = useMunData(slug);
   const { data: muns } = useMunicipios();
   const { byIbge } = useIbgeIndex(muns);
@@ -54,7 +55,6 @@ function Comparar() {
       .slice(0, 15),
   );
 
-  const [pdfBusy, setPdfBusy] = useState(false);
   const baixarPDF = async () => {
     setPdfBusy(true);
     try {
