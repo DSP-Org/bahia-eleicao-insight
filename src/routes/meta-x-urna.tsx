@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { CARGOS, useMeta, useMunData, useMunicipios, useIbgeIndex, nf, pf, pct, downloadCSV, slugify, type Municipio } from "@/lib/eleicoes";
-import { salvarPlanejamento, excluirPlanejamento } from "@/lib/planejamento.functions";
+import { salvarPlanejamento, excluirPlanejamento, verificarPinPlanejamento } from "@/lib/planejamento.functions";
 import { BuscaItem } from "@/components/relatorios/BuscaItem";
 import { MapaBA } from "@/components/MapaBA";
 import { PageHead, Card, Loading, Select, Btn, Stat } from "@/components/ui-bits";
@@ -45,7 +45,50 @@ const usePlanos = () =>
     },
   });
 
+const PIN_KEY = "metaxurna-pin";
+
 function MetaXUrna() {
+  const [pin, setPin] = useState<string | null>(() => (typeof window === "undefined" ? null : sessionStorage.getItem(PIN_KEY)));
+  if (!pin) return <PortaPin onEntrar={(p) => { sessionStorage.setItem(PIN_KEY, p); setPin(p); }} />;
+  return <Conteudo pin={pin} />;
+}
+
+function PortaPin({ onEntrar }: { onEntrar: (pin: string) => void }) {
+  const verificar = useServerFn(verificarPinPlanejamento);
+  const [valor, setValor] = useState("");
+  const [erro, setErro] = useState("");
+  const [checando, setChecando] = useState(false);
+
+  const entrar = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valor) return;
+    setChecando(true); setErro("");
+    try { await verificar({ data: { senha: valor } }); onEntrar(valor); }
+    catch (er) { setErro(er instanceof Error ? er.message : "Não foi possível verificar o PIN."); }
+    finally { setChecando(false); }
+  };
+
+  return (
+    <div className="mx-auto max-w-sm py-10">
+      <PageHead kicker="Área restrita" title="Meta x Urna">
+        Esta análise é interna. Digite o PIN de acesso para ver os planejamentos e comparar com o resultado das urnas.
+      </PageHead>
+      <Card title="Acesso com PIN">
+        <form onSubmit={entrar} className="grid gap-3">
+          <label className="grid gap-1 text-sm">PIN de acesso
+            <input type="password" inputMode="numeric" autoComplete="off" autoFocus value={valor}
+              onChange={(e) => setValor(e.target.value)}
+              className="rounded-md border border-input bg-background px-3 py-2" />
+          </label>
+          {erro && <p className="text-sm text-destructive">{erro}</p>}
+          <Btn type="submit" disabled={!valor || checando}>{checando ? "Verificando…" : "Entrar"}</Btn>
+        </form>
+      </Card>
+    </div>
+  );
+}
+
+function Conteudo({ pin }: { pin: string }) {
   const { data: planos, isLoading } = usePlanos();
   const [planoId, setPlanoId] = useState("");
   const [novo, setNovo] = useState(false);
@@ -65,8 +108,8 @@ function MetaXUrna() {
         )}
         <Btn onClick={() => setNovo((v) => !v)}>{novo ? "Fechar envio" : "Enviar planilha de planejamento"}</Btn>
       </div>
-      {(novo || !planos?.length) && <Envio onSalvo={(id) => { setPlanoId(id); setNovo(false); }} />}
-      {plano && !novo && <Analise plano={plano} />}
+      {(novo || !planos?.length) && <Envio pin={pin} onSalvo={(id) => { setPlanoId(id); setNovo(false); }} />}
+      {plano && !novo && <Analise plano={plano} pin={pin} />}
     </div>
   );
 }
@@ -107,7 +150,7 @@ async function lerPlanilha(file: File, muns: Municipio[]) {
   return { metas, naoAchados };
 }
 
-function Envio({ onSalvo }: { onSalvo: (id: string) => void }) {
+function Envio({ pin, onSalvo }: { pin: string; onSalvo: (id: string) => void }) {
   const { data: meta } = useMeta();
   const { data: muns } = useMunicipios();
   const qc = useQueryClient();
@@ -115,7 +158,7 @@ function Envio({ onSalvo }: { onSalvo: (id: string) => void }) {
   const [slug, setSlug] = useState("governador");
   const [candId, setCandId] = useState("");
   const [nome, setNome] = useState("");
-  const [senha, setSenha] = useState("");
+  const senha = pin;
   const [lido, setLido] = useState<{ metas: Record<string, number>; naoAchados: string[]; arquivo: string } | null>(null);
   const [erro, setErro] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -164,9 +207,6 @@ function Envio({ onSalvo }: { onSalvo: (id: string) => void }) {
             try { setLido({ ...(await lerPlanilha(f, muns)), arquivo: f.name }); } catch (er) { setLido(null); setErro(er instanceof Error ? er.message : "Não consegui ler a planilha."); }
           }} />
         </label>
-        <label className="grid gap-1 text-sm">Senha de envio
-          <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2" autoComplete="off" />
-        </label>
       </div>
       <p className="mt-3 text-sm text-muted-foreground">
         A planilha deve ter uma coluna <b>Município</b> (ou <b>Código IBGE/TSE</b>) e uma coluna <b>Meta</b> com o número de votos planejado.{" "}
@@ -184,7 +224,7 @@ function Envio({ onSalvo }: { onSalvo: (id: string) => void }) {
   );
 }
 
-function Analise({ plano }: { plano: Plano }) {
+function Analise({ plano, pin }: { plano: Plano; pin: string }) {
   const { data: meta } = useMeta();
   const { data: md } = useMunData(plano.cargo);
   const { data: muns } = useMunicipios();
@@ -314,8 +354,8 @@ function Analise({ plano }: { plano: Plano }) {
       <p className="text-xs text-muted-foreground">
         Planejamento enviado em {new Date(plano.criado_em).toLocaleString("pt-BR")}.{" "}
         <button className="underline" onClick={async () => {
-          const s = window.prompt("Senha de envio para excluir este planejamento:"); if (!s) return;
-          try { await excluir({ data: { senha: s, id: plano.id } }); await qc.invalidateQueries({ queryKey: ["planejamentos"] }); }
+          if (!window.confirm("Excluir este planejamento?")) return;
+          try { await excluir({ data: { senha: pin, id: plano.id } }); await qc.invalidateQueries({ queryKey: ["planejamentos"] }); }
           catch (e) { window.alert(e instanceof Error ? e.message : "Falha ao excluir."); }
         }}>Excluir planejamento</button>
       </p>
