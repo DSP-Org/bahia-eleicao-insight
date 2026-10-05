@@ -11,3 +11,4 @@
 
 - Election results are a static snapshot in public/data/*.json (generated from TSE `resultados.tse.jus.br/oficial/ele2026/{6257|6259}/dados/ba/*-u.json` + IBGE malha/localidades); refresh by re-running the fetch script rather than live-fetching 2000+ TSE files per request (Worker subrequest limits).
 - Leaflet is dynamic-imported inside useEffect in MapaBA so it never runs during SSR.
+- Report PDFs are generated client-side through a lazy-loaded pdf-lib module using bundled Unicode fonts and report color tokens from global CSS; this preserves accents and pagination without requiring server infrastructure.

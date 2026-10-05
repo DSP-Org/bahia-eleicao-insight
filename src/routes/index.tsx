@@ -6,10 +6,12 @@ import { PageHead, Stat, Card, Loading, Bar } from "@/components/ui-bits";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Eleições 2026 na Bahia — Resultados oficiais" },
+      { title: "Data Analytics — Eleições 2026 na Bahia" },
       { name: "description", content: "Painel com os resultados do TSE das Eleições 2026 na Bahia: presidente, governador, senado e deputados." },
-      { property: "og:title", content: "Eleições 2026 na Bahia — Resultados oficiais" },
+      { property: "og:title", content: "Data Analytics — Eleições 2026 na Bahia" },
       { property: "og:description", content: "Mapas por município, relatórios e comparativos de candidatos na Bahia." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Index,

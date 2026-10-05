@@ -2,14 +2,17 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { CARGOS, useMeta, useMunData, useMunicipios, winner, nf, pf, pct, downloadCSV, slugify } from "@/lib/eleicoes";
 import { PageHead, Card, Loading, Select, Btn } from "@/components/ui-bits";
+import { FileDown, LoaderCircle } from "lucide-react";
 
 export const Route = createFileRoute("/relatorios")({
   head: () => ({
     meta: [
-      { title: "Relatórios — Eleições 2026 na Bahia" },
-      { name: "description", content: "Tabelas por município, região, partido e concentração de votos, com exportação CSV." },
-      { property: "og:title", content: "Relatórios — Eleições 2026 na Bahia" },
-      { property: "og:description", content: "Relatórios completos com filtro e download em CSV." },
+      { title: "Relatórios — Data Analytics | Bahia 2026" },
+      { name: "description", content: "Data Analytics: relatórios das Eleições 2026 na Bahia por município, região e concentração de votos, em PDF e CSV." },
+      { property: "og:title", content: "Relatórios — Data Analytics | Bahia 2026" },
+      { property: "og:description", content: "Relatórios completos com filtro e download em PDF e CSV." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Relatorios,
@@ -26,6 +29,8 @@ function Relatorios() {
   const [tipo, setTipo] = useState("mun");
   const [slug, setSlug] = useState("governador");
   const [q, setQ] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const [pdfError, setPdfError] = useState("");
   const { data: meta } = useMeta();
   const { data: muns } = useMunicipios();
   const { data: md } = useMunData(slug);
@@ -53,7 +58,7 @@ function Relatorios() {
       });
       const ent = Object.entries(g);
       if (tipo === "abst") {
-        const rows = muns.map((m) => { const r = md[m.tse]!; return [m.nome, m.ri, r.el, r.co, pf(pct(r.co, r.el)), pf(pct(r.ab, r.el)), pf(pct(r.vb, r.co)), pf(pct(r.vn, r.co))]; })
+        const rows = muns.flatMap((m) => { const r = md[m.tse]; if (!r) return []; return [[m.nome, m.ri, r.el, r.co, pf(pct(r.co, r.el)), pf(pct(r.ab, r.el)), pf(pct(r.vb, r.co)), pf(pct(r.vn, r.co))]]; })
           .sort((a, b) => parseFloat(String(b[5]).replace(",", ".")) - parseFloat(String(a[5]).replace(",", ".")));
         return { head: ["Município", "Região", "Eleitores", "Comparec.", "% comparec.", "% abstenção", "% brancos", "% nulos"], rows };
       }
@@ -78,10 +83,28 @@ function Relatorios() {
 
   if (!meta) return <Loading />;
   const rows = table ? table.rows.map((r, i) => ({ r, i })).filter(({ r }) => !q || slugify(r.join(" ")).includes(slugify(q))) : [];
+  const exportPDF = async () => {
+    if (!table || !cargo || exporting) return;
+    setExporting(true); setPdfError("");
+    try {
+      const { downloadReportPDF } = await import("@/lib/report-pdf");
+      await downloadReportPDF({
+        title: TIPOS.find((t) => t.v === tipo)?.n ?? "Relatório", cargo: cargo.nome,
+        filter: q, headers: table.head, rows: rows.map((x) => x.r),
+        summary: [
+          { label: "Votos válidos no estado", value: nf(cargo.resumo.validos) },
+          { label: "Comparecimento no estado", value: pf(pct(cargo.resumo.comp, cargo.resumo.eleitores)) },
+          { label: "Registros selecionados", value: nf(rows.length) },
+        ],
+        ranking: cargo.candidatos.slice(0, 3).map((c) => ({ name: `${c.nome} (${c.partido})`, value: `${nf(c.votos)} votos · ${pf(c.pct)}`, share: c.pct / 100 })),
+      });
+    } catch (error) { console.error("Falha ao gerar relatório PDF", error); setPdfError("Não foi possível gerar o PDF. Tente novamente."); }
+    finally { setExporting(false); }
+  };
 
   return (
     <div>
-      <PageHead kicker="Relatórios" title="Dados em tabela">Escolha o tipo de relatório e o cargo. Tudo pode ser baixado em CSV (abre no Excel).</PageHead>
+      <PageHead kicker="Data Analytics · Relatórios" title="Dados em tabela" />
       <div className="mb-4 flex flex-wrap gap-3">
         <div className="flex flex-wrap gap-1">
           {TIPOS.map((t) => (
@@ -91,7 +114,9 @@ function Relatorios() {
         <Select value={slug} onChange={setSlug}>{CARGOS.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}</Select>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrar…" className="rounded-md border border-input bg-background px-3 py-2 text-sm" />
         {table && <Btn onClick={() => downloadCSV(`relatorio-${tipo}-${slug}.csv`, [table.head, ...rows.map((x) => x.r)])}>Baixar CSV</Btn>}
+        {table && <Btn onClick={exportPDF} disabled={exporting}>{exporting ? <LoaderCircle size={16} className="animate-spin motion-reduce:animate-none" /> : <FileDown size={16} />}{exporting ? "Gerando PDF…" : "Baixar PDF"}</Btn>}
       </div>
+      {pdfError && <p role="alert" className="mb-3 text-sm text-destructive">{pdfError}</p>}
       {tipo === "conc" && <p className="mb-3 text-sm text-muted-foreground">HHI alto (perto de 10.000) = votos concentrados em poucos municípios; baixo = votação espalhada pelo estado.</p>}
       <Card>
         {!table ? <Loading /> : (

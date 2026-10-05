@@ -7,10 +7,12 @@ import { PageHead, Stat, Card, Loading, Btn, Bar } from "@/components/ui-bits";
 export const Route = createFileRoute("/candidato/$id")({
   head: () => ({
     meta: [
-      { title: "Candidato — Eleições 2026 na Bahia" },
+      { title: "Candidato — Data Analytics | Bahia 2026" },
       { name: "description", content: "Desempenho do candidato em cada município e região da Bahia nas Eleições 2026." },
-      { property: "og:title", content: "Desempenho de candidato — Eleições 2026 na Bahia" },
+      { property: "og:title", content: "Desempenho de candidato — Data Analytics | Bahia 2026" },
       { property: "og:description", content: "Mapa de votos, melhores e piores municípios e resultado por região." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: CandPage,

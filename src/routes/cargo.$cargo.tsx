@@ -10,10 +10,12 @@ export const Route = createFileRoute("/cargo/$cargo")({
     const n = CARGOS.find((c) => c.slug === params.cargo)?.nome ?? "Cargo";
     return {
       meta: [
-        { title: `${n} — Eleições 2026 na Bahia` },
+        { title: `${n} — Data Analytics | Bahia 2026` },
         { name: "description", content: `Resultado completo para ${n} na Bahia em 2026: ranking, partidos e eleitos.` },
-        { property: "og:title", content: `${n} — Eleições 2026 na Bahia` },
+        { property: "og:title", content: `${n} — Data Analytics | Bahia 2026` },
         { property: "og:description", content: `Ranking de candidatos e votos por partido para ${n}.` },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
       ],
     };
   },

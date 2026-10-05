@@ -69,6 +69,6 @@ export function CargoTabs({ current }: { current: string }) {
   );
 }
 
-export function Btn({ onClick, children }: { onClick: () => void; children: ReactNode }) {
-  return <button onClick={onClick} className="rounded-md border border-foreground px-3 py-1.5 text-sm font-medium hover:bg-foreground hover:text-background">{children}</button>;
+export function Btn({ onClick, children, disabled = false }: { onClick: () => void; children: ReactNode; disabled?: boolean }) {
+  return <button onClick={onClick} disabled={disabled} className="inline-flex items-center justify-center gap-2 rounded-md border border-foreground px-3 py-1.5 text-sm font-medium hover:bg-foreground hover:text-background disabled:cursor-wait disabled:opacity-50">{children}</button>;
 }

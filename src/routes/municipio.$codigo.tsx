@@ -6,10 +6,12 @@ import { PageHead, Stat, Card, Loading, Bar } from "@/components/ui-bits";
 export const Route = createFileRoute("/municipio/$codigo")({
   head: () => ({
     meta: [
-      { title: "Município — Eleições 2026 na Bahia" },
+      { title: "Município — Data Analytics | Bahia 2026" },
       { name: "description", content: "Resultado de todos os cargos em um município da Bahia nas Eleições 2026." },
-      { property: "og:title", content: "Resultado por município — Eleições 2026 na Bahia" },
+      { property: "og:title", content: "Resultado por município — Data Analytics | Bahia 2026" },
       { property: "og:description", content: "Comparecimento, votos por cargo e comparação com a média do estado." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: MunPage,
