@@ -98,12 +98,12 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen">
         <header className="border-b border-border bg-card">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <Link to="/" className="flex items-center gap-3">
-              <img src={logoUrl} alt="Data5 Analytics" className="h-11 w-auto" width={1280} height={640} />
+          <div className="mx-auto grid max-w-7xl gap-3 px-4 py-3 md:flex md:flex-wrap md:items-center md:justify-between">
+            <Link to="/" className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
+              <img src={logoUrl} alt="Data5 Analytics" className="h-11 w-auto shrink-0" width={1280} height={640} />
               <span className="border-l border-border pl-3 font-sans text-xs font-medium uppercase tracking-wide text-muted-foreground">Eleições 2026 - BA</span>
             </Link>
-            <nav className="flex flex-wrap gap-1 text-sm">
+            <nav aria-label="Navegação principal" className="grid grid-cols-3 gap-1 text-center text-sm sm:flex sm:flex-wrap">
               {NAV.map((n) => (
                 <Link key={n.to} to={n.to} activeOptions={{ exact: n.to === "/" }}
                   className="rounded-md px-3 py-1.5 hover:bg-accent"
@@ -116,10 +116,10 @@ function RootComponent() {
             </nav>
           </div>
         </header>
-        <main className="mx-auto max-w-7xl px-4 py-8">
+        <main className="mx-auto min-w-0 max-w-7xl px-4 py-6 md:py-8">
           <Outlet />
         </main>
-        <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
+        <footer className="border-t border-border px-4 py-6 text-center text-xs text-muted-foreground">
           Data5 Analytics · Fonte: Tribunal Superior Eleitoral (resultados.tse.jus.br) · 1º turno, 04/10/2026 · Malha municipal: IBGE
         </footer>
       </div>

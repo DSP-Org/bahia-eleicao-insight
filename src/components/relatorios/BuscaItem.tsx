@@ -36,7 +36,7 @@ export function BuscaItem<T>({
   };
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0 max-w-full">
       <input
         value={q}
         placeholder={placeholder}
@@ -72,7 +72,7 @@ export function BuscaItem<T>({
                   e.preventDefault();
                   escolher(it);
                 }}
-                className={`cursor-pointer border-b border-border px-3 py-2 text-sm last:border-0 ${i === ativo ? "bg-accent" : "hover:bg-accent"}`}
+                className={`break-words cursor-pointer border-b border-border px-3 py-2 text-sm last:border-0 ${i === ativo ? "bg-accent" : "hover:bg-accent"}`}
               >
                 {render(it)}
               </div>

@@ -54,5 +54,5 @@ export function MapaBA({ fill, tooltip, onSelect, selected, height = 560 }: Prop
   }
   useEffect(restyle);
 
-  return <div ref={el} style={{ height }} className="w-full rounded-md border border-border bg-muted" />;
+  return <div ref={el} style={{ height }} className="election-map min-w-0 w-full rounded-md border border-border bg-muted" />;
 }

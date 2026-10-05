@@ -68,12 +68,12 @@ function MapaPage() {
           {CARGOS.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}
         </Select>
         {candIdx >= 0 ? (
-          <div className="flex min-w-64 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm">
+          <div className="flex w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm">
             <span className="truncate">Força de: <b>{cargo.candidatos[candIdx].nome}</b> <span className="text-muted-foreground">({cargo.candidatos[candIdx].partido})</span></span>
             <button aria-label="Voltar ao mapa de vencedores" title="Voltar ao mapa de vencedores" onClick={() => setCand("")} className="text-muted-foreground hover:text-foreground">×</button>
           </div>
         ) : (
-          <div className="min-w-64">
+          <div className="w-full min-w-0 sm:w-80">
             <BuscaItem
               itens={cargo.candidatos}
               busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)}
@@ -101,7 +101,7 @@ function MapaPage() {
                   const c = cargo.candidatos[+k];
                   return (
                     <li key={k} className="text-sm">
-                      <div className="flex justify-between"><span>{c.nome} <span className="text-muted-foreground">({c.partido})</span></span><span className="font-mono">{pf(pct(v, selRes.vv))}</span></div>
+                      <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2"><span>{c.nome} <span className="text-muted-foreground">({c.partido})</span></span><span className="font-mono">{pf(pct(v, selRes.vv))}</span></div>
                       <Bar value={pct(v, selRes.vv)} color={partyColor(c.partido)} />
                     </li>
                   );
@@ -112,8 +112,8 @@ function MapaPage() {
           <Card title="Municípios vencidos">
             <ul className="space-y-1.5 text-sm">
               {stats?.wins.slice(0, 15).map(({ c, n }) => (
-                <li key={c.id} className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2"><span className="inline-block h-3 w-3 rounded-sm" style={{ background: partyColor(c.partido) }} />{c.nome} ({c.partido})</span>
+                <li key={c.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
+                  <span className="flex min-w-0 items-center gap-2"><span className="inline-block h-3 w-3 shrink-0 rounded-sm" style={{ background: partyColor(c.partido) }} />{c.nome} ({c.partido})</span>
                   <span className="font-mono">{n}</span>
                 </li>
               ))}
