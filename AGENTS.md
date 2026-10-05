@@ -13,3 +13,6 @@
 - Leaflet is dynamic-imported inside useEffect in MapaBA so it never runs during SSR.
 - Report PDFs are generated client-side through a lazy-loaded pdf-lib module using bundled Unicode fonts, report color tokens from global CSS, and a cropped CDN-hosted brand logo embedded on every page; this preserves accents, legible branding, and pagination without requiring server infrastructure.
 - Wide election tables use labeled mobile record cards below the small-screen breakpoint, while report cards retain filtering and sorting; this keeps phone layouts readable without losing data or changing exports.
+- A chosen name in any large pick-list doubles as the search field (BuscaItem's `selecionado`): clicking or typing on it reopens the suggestions, so changing a choice never needs a clear button first.
+- Indicator numbers and labels size themselves with their own box through container-query clamps instead of fixed text classes, because the same Stat renders in grids from 2 to 5 columns and fixed sizes either wrap a number mid-digit or overflow the cell.
+
