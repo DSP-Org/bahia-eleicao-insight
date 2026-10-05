@@ -25,7 +25,7 @@ function Index() {
 
   return (
     <div>
-      <PageHead kicker={`Apuração ${pf(r.pst)} · atualizado ${r.hora}`} title="Eleições 2026 na Bahia">
+      <PageHead kicker="Resultado final · 1º turno · análise pós-eleição" title="Eleições 2026 na Bahia">
         Resultado oficial do 1º turno (04/10/2026) para todos os cargos, com dados de cada um dos 417 municípios.
       </PageHead>
 
