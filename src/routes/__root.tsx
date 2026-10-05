@@ -89,6 +89,7 @@ const NAV = [
   { to: "/mapa", label: "Mapa" },
   { to: "/comparar", label: "Comparar" },
   { to: "/relatorios", label: "Relatórios" },
+  { to: "/meta-x-urna", label: "Meta x Urna" },
 ] as const;
 
 function RootComponent() {
