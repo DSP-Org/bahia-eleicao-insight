@@ -65,7 +65,7 @@ function CandPage() {
         {cand.nomeCompleto} · {cand.agr}{cand.vice.length ? ` · Vice/suplentes: ${cand.vice.join(", ")}` : ""}
         {" · "}<Link to="/relatorios" search={{ r: "dossie", cand: cand.id }} className="text-primary underline">Dossiê completo (PDF)</Link>
       </PageHead>
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <Stat label="Votos" value={nf(cand.votos)} />
         <Stat label="% válidos" value={pf(cand.pct)} />
         <Stat label="Posição" value={`${pos}º`} sub={`de ${cargo.candidatos.length}`} />

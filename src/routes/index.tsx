@@ -31,7 +31,7 @@ function Index() {
         Resultado oficial do 1º turno (04/10/2026) para todos os cargos, com dados de cada um dos 417 municípios.
       </PageHead>
 
-      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <Stat label="Eleitores" value={nf(r.eleitores)} />
         <Stat label="Comparecimento" value={pf(pct(r.comp, r.eleitores))} sub={nf(r.comp)} />
         <Stat label="Abstenção" value={pf(pct(r.abst, r.eleitores))} sub={nf(r.abst)} />
