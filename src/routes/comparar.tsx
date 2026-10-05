@@ -233,7 +233,7 @@ function Comparar() {
           </div>
 
           <div className="mb-4 grid gap-3 md:grid-cols-2">
-            {candidatosDiferentes.map((item, k) => <CandidateCard key={`${item.cargo.slug}-${item.candidato.id}`} candidato={item.candidato} cargo={item.cargo} cor={SERIES[k]} posicao={item.indice + 1} destaqueLabel="Maior percentual" destaqueValor={`${nf(liderancasRelativas[k])} municípios`} />)}
+            {candidatosDiferentes.map((item, k) => <CandidateCard key={`${item.cargo.slug}-${item.candidato.id}`} candidato={item.candidato} cargo={item.cargo} cor={SERIES[k]} posicao={item.indice + 1} destaqueLabel="Lidera em %" destaqueValor={`${nf(liderancasRelativas[k])} municípios`} />)}
           </div>
 
           <div className="mb-5 grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2">
