@@ -50,7 +50,7 @@ function CargoPage() {
   return (
     <div>
       <CargoTabs current={slug} />
-      <PageHead kicker={`${cargo.vagas} vaga${cargo.vagas > 1 ? "s" : ""} · apuração ${pf(r.pst)}`} title={cargo.nome} />
+      <PageHead kicker={`${cargo.vagas} vaga${cargo.vagas > 1 ? "s" : ""} · resultado final`} title={cargo.nome} />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
         <Stat label="Votos válidos" value={nf(r.validos)} />
         <Stat label="Brancos" value={pf(pct(r.brancos, r.total))} sub={nf(r.brancos)} />
