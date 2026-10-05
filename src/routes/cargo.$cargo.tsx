@@ -27,6 +27,7 @@ function CargoPage() {
   const { data: meta } = useMeta();
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"votos" | "nome">("votos");
+  const [pdfBusy, setPdfBusy] = useState(false);
   const cargo = meta?.cargos.find((c) => c.slug === slug);
 
   const partidos = useMemo(() => {
