@@ -55,9 +55,18 @@ function MapaPage() {
   const tip = (ibge: string) => {
     const m = byIbge[ibge]; const r = m && md?.[m.tse];
     if (!m || !r) return m?.nome ?? "";
-    if (candIdx >= 0) return `<b>${m.nome}</b><br/>${cargo.candidatos[candIdx].nome}: ${pf(pct(r.v[candIdx] ?? 0, r.vv))}`;
-    const w = winner(r); const c = cargo.candidatos[w];
-    return `<b>${m.nome}</b><br/>${c?.nome} (${c?.partido}) ${pf(pct(r.v[w] ?? 0, r.vv))}`;
+    const linha = (k: number) => {
+      const c = cargo.candidatos[k]; const v = r.v[k] ?? 0;
+      return `${c.nome} (${c.partido}): <b>${nf(v)}</b> votos · ${pf(pct(v, r.vv))}`;
+    };
+    const rodape = `<span style="opacity:.7">Votos válidos: ${nf(r.vv)}</span>`;
+    if (candIdx >= 0) {
+      const w = winner(r);
+      const extra = w >= 0 && w !== candIdx ? `<br/>Venceu aqui: ${linha(w)}` : "";
+      return `<b>${m.nome}</b><br/>${linha(candIdx)}${extra}<br/>${rodape}`;
+    }
+    const ord = Object.keys(r.v).map(Number).filter((k) => r.v[k] > 0).sort((a, b) => r.v[b] - r.v[a]);
+    return `<b>${m.nome}</b><br/>${ord.slice(0, 3).map(linha).join("<br/>")}<br/>${rodape}`;
   };
 
   return (
