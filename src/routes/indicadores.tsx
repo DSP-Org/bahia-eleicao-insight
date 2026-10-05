@@ -4,7 +4,7 @@ import { createIsomorphicFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { ArrowUpRight, Search, Users, Vote, Trophy, MapPin, UserRound, LayoutGrid, type LucideIcon } from "lucide-react";
 import { CARGOS, slugify, type Meta, type Municipio, type MunData } from "@/lib/eleicoes";
-import { criarIndicadores, type GrupoIndicador } from "@/lib/indicadores";
+import { criarIndicadores, recortarCargo, type GrupoIndicador } from "@/lib/indicadores";
 import { PageHead, Select } from "@/components/ui-bits";
 import { Button } from "@/components/ui/button";
 import { BuscaItem } from "@/components/relatorios/BuscaItem";
@@ -74,9 +74,24 @@ function Indicadores() {
   const [candidatoId, setCandidatoId] = useState("");
   const [grupo, setGrupo] = useState<"todos" | GrupoIndicador>("todos");
   const [busca, setBusca] = useState("");
-  const cargo = meta.cargos.find((c) => c.slug === slug) ?? meta.cargos[0];
+  const [recorte, setRecorte] = useState("ba");
+  const recortes = useMemo(() => [
+    { v: "ba", nome: "Bahia inteira", grupo: "" },
+    ...[...new Set(municipios.map((m) => m.ri))].sort().map((n) => ({ v: `ri:${n}`, nome: n, grupo: "Região intermediária" })),
+    ...[...new Set(municipios.map((m) => m.rim))].sort().map((n) => ({ v: `rim:${n}`, nome: n, grupo: "Região imediata" })),
+    ...[...new Set(municipios.map((m) => m.ti).filter(Boolean) as string[])].sort().map((n) => ({ v: `ti:${n}`, nome: n, grupo: "Território de identidade" })),
+    ...municipios.map((m) => ({ v: `mun:${m.tse}`, nome: m.nome, grupo: "Município" })),
+  ], [municipios]);
+  const recorteAtual = recortes.find((r) => r.v === recorte) ?? recortes[0];
+  const munsRecorte = useMemo(() => {
+    if (recorte === "ba") return municipios;
+    const [tipo, ...resto] = recorte.split(":"); const valor = resto.join(":");
+    return municipios.filter((m) => tipo === "mun" ? m.tse === valor : (m as Record<string, unknown>)[tipo] === valor);
+  }, [recorte, municipios]);
+  const cargoBase = meta.cargos.find((c) => c.slug === slug) ?? meta.cargos[0];
+  const cargo = useMemo(() => cargoBase && recorte !== "ba" ? recortarCargo(cargoBase, munsRecorte, dados[cargoBase.slug] ?? {}) : cargoBase, [cargoBase, recorte, munsRecorte, dados]);
   const candidato = cargo?.candidatos.find((c) => c.id === candidatoId) ?? cargo?.candidatos[0];
-  const secoes = useMemo(() => cargo ? criarIndicadores(cargo, municipios, dados[cargo.slug] ?? {}, candidato?.id ?? "") : [], [cargo, municipios, dados, candidato]);
+  const secoes = useMemo(() => cargo ? criarIndicadores(cargo, munsRecorte, dados[cargo.slug] ?? {}, candidato?.id ?? "") : [], [cargo, munsRecorte, dados, candidato]);
   const termo = slugify(busca.trim());
   const filtradas = secoes.map((s) => ({ ...s, cards: s.cards.filter((c) => slugify(`${c.label} ${c.value} ${c.detail}`).includes(termo)) })).filter((s) => s.cards.length);
   const contagem = (id: "todos" | GrupoIndicador) => filtradas.filter((s) => id === "todos" || s.id === id).reduce((t, s) => t + s.cards.length, 0);
@@ -95,17 +110,21 @@ function Indicadores() {
         <span>Participação, votos e força territorial · Eleições 2026 - BA</span>
       </PageHead>
 
-      <div className={`mb-5 grid gap-4 border-b border-border pb-5 sm:grid-cols-2 ${mostraCandidato ? "lg:grid-cols-[200px_minmax(0,1fr)_minmax(0,1fr)]" : "lg:grid-cols-[200px_minmax(0,1fr)]"}`}>
+      <div className={`mb-5 grid gap-4 border-b border-border pb-5 sm:grid-cols-2 ${mostraCandidato ? "lg:grid-cols-[180px_repeat(3,minmax(0,1fr))]" : "lg:grid-cols-[180px_repeat(2,minmax(0,1fr))]"}`}>
         <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted-foreground">Cargo
           <Select value={slug} onChange={(value) => { setSlug(value); setCandidatoId(""); }} className="min-h-11 w-full">
             {CARGOS.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}
           </Select>
         </label>
+        <div className="grid min-w-0 gap-1.5">
+          <p className="text-xs font-semibold text-muted-foreground">Recorte</p>
+          <BuscaItem itens={recortes} busca={(i) => slugify(`${i.nome} ${i.grupo}`)} render={(i) => <span><b>{i.nome}</b>{i.grupo && <span className="text-muted-foreground"> · {i.grupo}</span>}</span>} onEscolher={(i) => setRecorte(i.v)} placeholder="Região, território ou município…" rotulo="Buscar recorte dos indicadores" selecionado={recorteAtual} chip={(i) => <span>{i.nome}{i.grupo && <span className="text-muted-foreground"> · {i.grupo}</span>}</span>} onLimpar={recorte !== "ba" ? () => setRecorte("ba") : undefined} rotuloLimpar="Voltar para Bahia inteira" />
+        </div>
         {mostraCandidato && <div className="grid min-w-0 gap-1.5">
           <p className="text-xs font-semibold text-muted-foreground">Candidato do raio-x</p>
           <BuscaItem key={slug} itens={cargo.candidatos} busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)} render={(c) => <span>{c.nome} · {c.partido}</span>} onEscolher={(c) => setCandidatoId(c.id)} placeholder="Nome, partido ou número…" rotulo="Buscar candidato dos indicadores" selecionado={candidato ?? null} />
         </div>}
-        <label className={`grid min-w-0 gap-1.5 ${mostraCandidato ? "sm:col-span-2 lg:col-span-1" : ""}`}>
+        <label className={`grid min-w-0 gap-1.5 ${mostraCandidato ? "" : "sm:col-span-2 lg:col-span-1"}`}>
           <span className="text-xs font-semibold text-muted-foreground">Buscar indicador</span>
           <div className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-input bg-background px-3">
             <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -120,7 +139,7 @@ function Indicadores() {
       </div>}
 
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-        <div className="min-w-0"><p className="font-display text-xl font-bold">{cargo.nome}</p><p className="text-xs text-muted-foreground">Bahia · 04 de outubro de 2026</p></div>
+        <div className="min-w-0"><p className="font-display text-xl font-bold">{cargo.nome}</p><p className="text-xs text-muted-foreground">{recorteAtual.nome}{recorte !== "ba" && ` · ${munsRecorte.length} município${munsRecorte.length > 1 ? "s" : ""}`} · 04 de outubro de 2026</p></div>
         <span className="shrink-0 font-mono text-xs text-muted-foreground">{quantidade} indicadores</span>
       </div>
       {cargo.slug === "senador" && <p className="mb-6 border-l-2 border-chart-2 pl-3 text-sm text-muted-foreground">Senado: cada eleitor pôde votar em dois candidatos. Percentuais de votação usam o total de votos válidos, não o número de pessoas.</p>}
@@ -145,7 +164,7 @@ function Indicadores() {
       </div>
       {!quantidade && <p className="py-12 text-center text-muted-foreground">Nenhum indicador encontrado.</p>}
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4 text-xs text-muted-foreground">
-        <p>Fonte: TSE / IBGE · Percentuais calculados dentro do cargo selecionado.</p>
+        <p>Fonte: TSE / IBGE · Números recalculados para o recorte e o cargo selecionados.</p>
         <Button asChild variant="link" size="sm"><Link to="/cargo/$cargo" params={{ cargo: cargo.slug }}>Resultado completo<ArrowUpRight /></Link></Button>
       </div>
     </div>
