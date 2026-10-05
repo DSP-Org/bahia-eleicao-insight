@@ -52,9 +52,9 @@ export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: M
       card("Não compareceram", r.abst, `${pf(pct(r.abst, r.eleitores))} dos eleitores`),
       card("Taxa de comparecimento", pf(pct(r.comp, r.eleitores)), "Comparecimento ÷ eleitorado"),
       card("Taxa de abstenção", pf(pct(r.abst, r.eleitores)), "Abstenção ÷ eleitorado"),
-      card("Seções eleitorais", r.secTot, "Seções informadas no resultado"),
-      card("Eleitores por seção", nf(Math.round(r.eleitores / (r.secTot || 1))), "Média do eleitorado"),
-      card("Comparecimento por seção", nf(Math.round(r.comp / (r.secTot || 1))), "Média de eleitores presentes"),
+      ...(r.secTot > 0 ? [card("Seções eleitorais", r.secTot, "Seções informadas no resultado"),
+      card("Eleitores por seção", nf(Math.round(r.eleitores / r.secTot)), "Média do eleitorado"),
+      card("Comparecimento por seção", nf(Math.round(r.comp / r.secTot)), "Média de eleitores presentes")] : []),
       ...extremos("comparecimento", (l) => pct(l.resultado.co, l.resultado.el), pf),
       ...extremos("abstenção", (l) => pct(l.resultado.ab, l.resultado.el), pf),
     ] },
@@ -88,7 +88,7 @@ export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: M
       ...(partido ? [card("Partido mais votado", partido.sg, `${nf(partido.votosTot)} votos nominais + legenda`, true)] : []),
     ] },
     { id: "territorio", title: "Retrato dos municípios", cards: [
-      card("Municípios", municipios.length, "Municípios da Bahia no cadastro"),
+      card("Municípios", municipios.length, "Municípios no recorte escolhido"),
       card("Municípios com resultado", linhas.length, "Resultado disponível para este cargo"),
       card("Territórios de identidade", new Set(municipios.map((m) => m.ti).filter(Boolean)).size, "Territórios presentes no cadastro"),
       card("Regiões imediatas", new Set(municipios.map((m) => m.rim).filter(Boolean)).size, "Divisão regional do IBGE"),
@@ -119,4 +119,17 @@ export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: M
       ...(regiao ? [card("Região com mais votos", regiao[0], `${nf(regiao[1])} votos · região intermediária`, true)] : []),
     ] : [] },
   ];
+}
+/** Recalcula resumo, votos de candidatos e partidos somando só os municípios do recorte. */
+export function recortarCargo(cargo: Cargo, municipios: Municipio[], dados: MunData): Cargo {
+  const res = municipios.map((m) => dados[m.tse]).filter((x): x is NonNullable<typeof x> => Boolean(x));
+  const soma = (f: (x: (typeof res)[number]) => number) => res.reduce((s, x) => s + f(x), 0);
+  const validos = soma((x) => x.vv), brancos = soma((x) => x.vb), nulos = soma((x) => x.vn);
+  const resumo = { ...cargo.resumo, secTot: 0, eleitores: soma((x) => x.el), comp: soma((x) => x.co), abst: soma((x) => x.ab), validos, brancos, nulos, total: soma((x) => x.tv ?? x.vv + x.vb + x.vn) };
+  const candidatos = cargo.candidatos.map((c, i) => { const votos = soma((x) => x.v[String(i)] ?? 0); return { ...c, votos, pct: pct(votos, validos) }; });
+  const partidos = cargo.partidos.map((p) => {
+    const legenda = soma((x) => x.l?.[p.n] ?? 0);
+    return { ...p, legenda, votosTot: legenda + candidatos.filter((c) => c.partido === p.sg).reduce((s, c) => s + c.votos, 0) };
+  });
+  return { ...cargo, resumo, candidatos, partidos };
 }
