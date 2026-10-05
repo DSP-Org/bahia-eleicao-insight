@@ -122,7 +122,7 @@ function Comparar() {
             <div className="mt-3 grid grid-cols-3 gap-2">
               <Stat label="Votos" value={nf(c.votos)} />
               <Stat label="% válidos" value={pf(c.pct)} />
-              <Stat label="Vence em" value={nf(wins[k])} sub="municípios" />
+              <Stat label="Vence em" value={nf(wins[k])} sub="municípios vencidos" />
             </div>
           </div>
         ))}
