@@ -354,8 +354,8 @@ function Analise({ plano, pin }: { plano: Plano; pin: string }) {
       <p className="text-xs text-muted-foreground">
         Planejamento enviado em {new Date(plano.criado_em).toLocaleString("pt-BR")}.{" "}
         <button className="underline" onClick={async () => {
-          const s = window.prompt("Senha de envio para excluir este planejamento:"); if (!s) return;
-          try { await excluir({ data: { senha: s, id: plano.id } }); await qc.invalidateQueries({ queryKey: ["planejamentos"] }); }
+          if (!window.confirm("Excluir este planejamento?")) return;
+          try { await excluir({ data: { senha: pin, id: plano.id } }); await qc.invalidateQueries({ queryKey: ["planejamentos"] }); }
           catch (e) { window.alert(e instanceof Error ? e.message : "Falha ao excluir."); }
         }}>Excluir planejamento</button>
       </p>
