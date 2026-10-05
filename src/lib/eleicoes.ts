@@ -64,3 +64,20 @@ export function downloadCSV(name: string, rows: (string | number)[][]) {
 export function slugify(s: string) {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
+
+export function winner(m: MunRes | null | undefined): number {
+  if (!m) return -1;
+  let best = -1, bv = -1;
+  for (const [k, v] of Object.entries(m.v)) if (v > bv) { bv = v; best = Number(k); }
+  return best;
+}
+export function heat(p: number, max: number, color: string) {
+  const t = max ? Math.min(1, p / max) : 0;
+  return `color-mix(in oklch, ${color} ${Math.round(8 + t * 92)}%, #f3eee3)`;
+}
+export function useIbgeIndex(muns?: Municipio[]) {
+  const byIbge: Record<string, Municipio> = {};
+  const byTse: Record<string, Municipio> = {};
+  muns?.forEach((m) => { byIbge[m.ibge] = m; byTse[m.tse] = m; });
+  return { byIbge, byTse };
+}
