@@ -1,11 +1,21 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 const checarSenha = (senha: string) => {
   const certa = process.env["PLANEJAMENTO_SENHA"];
-  if (!certa) throw new Error("A senha de envio ainda não foi configurada.");
-  if (senha !== certa) throw new Error("Senha incorreta.");
+  if (!certa) throw new Error("A senha de acesso ainda não foi configurada.");
+  const a = createHash("sha256").update(senha, "utf8").digest();
+  const b = createHash("sha256").update(certa, "utf8").digest();
+  if (!timingSafeEqual(a, b)) throw new Error("PIN incorreto.");
 };
+
+export const verificarPinPlanejamento = createServerFn({ method: "POST" })
+  .inputValidator((d) => z.object({ senha: z.string().min(1).max(200) }).parse(d))
+  .handler(async ({ data }) => {
+    checarSenha(data.senha);
+    return { ok: true as const };
+  });
 
 export const salvarPlanejamento = createServerFn({ method: "POST" })
   .inputValidator((d) =>
