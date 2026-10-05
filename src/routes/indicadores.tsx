@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { createIsomorphicFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
 import { ArrowUpRight, Search, Users, Vote, Trophy, MapPin, UserRound, LayoutGrid, type LucideIcon } from "lucide-react";
 import { CARGOS, slugify, type Meta, type Municipio, type MunData } from "@/lib/eleicoes";
@@ -8,13 +9,22 @@ import { PageHead, Select } from "@/components/ui-bits";
 import { Button } from "@/components/ui/button";
 import { BuscaItem } from "@/components/relatorios/BuscaItem";
 
-const options = <T,>(key: string[], path: string) => ({
-  queryKey: key,
-  queryFn: async (): Promise<T> => {
+const fetchSnapshot = createIsomorphicFn()
+  .server(async (path: string) => {
+    const { getRequestUrl } = await import("@tanstack/react-start/server");
+    const response = await fetch(new URL(path, getRequestUrl()));
+    if (!response.ok) throw new Error("Não foi possível carregar os indicadores.");
+    return response.json();
+  })
+  .client(async (path: string) => {
     const response = await fetch(path);
     if (!response.ok) throw new Error("Não foi possível carregar os indicadores.");
     return response.json();
-  },
+  });
+
+const options = <T,>(key: string[], path: string) => ({
+  queryKey: key,
+  queryFn: (): Promise<T> => fetchSnapshot(path),
   staleTime: Infinity,
 });
 const metaOptions = options<Meta>(["meta"], "/data/meta.json");
@@ -22,9 +32,7 @@ const municipiosOptions = options<Municipio[]>(["municipios"], "/data/municipios
 const dadosOptions = options<Record<string, MunData>>(["indicadores", "dados"], "/data/mun-governador.json");
 // All office snapshots are loaded together so changing offices never shows partial municipal metrics.
 dadosOptions.queryFn = async () => Object.fromEntries(await Promise.all(CARGOS.map(async ({ slug }) => {
-  const response = await fetch(`/data/mun-${slug}.json`);
-  if (!response.ok) throw new Error("Não foi possível carregar os indicadores.");
-  return [slug, await response.json() as MunData];
+  return [slug, await fetchSnapshot(`/data/mun-${slug}.json`) as MunData];
 })));
 
 export const Route = createFileRoute("/indicadores")({
