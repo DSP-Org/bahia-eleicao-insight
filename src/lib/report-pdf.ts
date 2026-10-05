@@ -53,8 +53,8 @@ export async function downloadReportPDF(report: Report) {
   const newPage = () => {
     const p = doc.addPage([W, H]);
     p.drawRectangle({ x: 0, y: 0, width: W, height: H, color: paper });
-    text(p, "Data Analytics", margin, H - 39, 18, true);
-    text(p, "ELEIÇÕES 2026 / BAHIA", W - 208, H - 35, 9, true, muted);
+    text(p, "Data5 Analytics", margin, H - 39, 18, true);
+    text(p, "ELEIÇÕES 2026 - BA", W - 208, H - 35, 9, true, muted);
     p.drawLine({ start: { x: margin, y: H - 52 }, end: { x: W - margin, y: H - 52 }, color: accent, thickness: 2 });
     return p;
   };
@@ -130,11 +130,11 @@ export async function downloadReportPDF(report: Report) {
   const pages = doc.getPages();
   pages.forEach((p, i) => {
     p.drawLine({ start: { x: margin, y: 42 }, end: { x: W - margin, y: 42 }, color: line, thickness: 0.5 });
-    text(p, `Data Analytics · TSE / IBGE · Emitido em ${generated}`, margin, 26, 7, false, muted);
+    text(p, `Data5 Analytics · TSE / IBGE · Emitido em ${generated}`, margin, 26, 7, false, muted);
     text(p, `${i + 1} / ${pages.length}`, W - margin - 30, 26, 8, true, muted);
   });
-  doc.setTitle(`Data Analytics — ${report.title} — ${report.cargo}`);
-  doc.setAuthor("Data Analytics");
+  doc.setTitle(`Data5 Analytics — ${report.title} — ${report.cargo}`);
+  doc.setAuthor("Data5 Analytics");
   doc.setSubject("Resultados das Eleições 2026 na Bahia — análise pós-eleição");
   const bytes = await doc.save();
   const url = URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: "application/pdf" }));

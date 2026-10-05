@@ -7,9 +7,9 @@ import { FileDown, LoaderCircle } from "lucide-react";
 export const Route = createFileRoute("/relatorios")({
   head: () => ({
     meta: [
-      { title: "Relatórios — Data Analytics | Bahia 2026" },
-      { name: "description", content: "Data Analytics: relatórios das Eleições 2026 na Bahia por município, região e concentração de votos, em PDF e CSV." },
-      { property: "og:title", content: "Relatórios — Data Analytics | Bahia 2026" },
+      { title: "Relatórios — Data5 Analytics | Eleições 2026 - BA" },
+      { name: "description", content: "Data5 Analytics: relatórios das Eleições 2026 na Bahia por município, região e concentração de votos, em PDF e CSV." },
+      { property: "og:title", content: "Relatórios — Data5 Analytics | Eleições 2026 - BA" },
       { property: "og:description", content: "Relatórios completos com filtro e download em PDF e CSV." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -104,7 +104,7 @@ function Relatorios() {
 
   return (
     <div>
-      <PageHead kicker="Data Analytics · Relatórios" title="Dados em tabela" />
+      <PageHead kicker="Data5 Analytics · Relatórios" title="Dados em tabela" />
       <div className="mb-4 flex flex-wrap gap-3">
         <div className="flex flex-wrap gap-1">
           {TIPOS.map((t) => (

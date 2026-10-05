@@ -7,9 +7,9 @@ import { PageHead, Card, Loading, Select, Bar } from "@/components/ui-bits";
 export const Route = createFileRoute("/mapa")({
   head: () => ({
     meta: [
-      { title: "Mapa por município — Data Analytics | Bahia 2026" },
+      { title: "Mapa por município — Data5 Analytics | Eleições 2026 - BA" },
       { name: "description", content: "Veja quem venceu em cada um dos 417 municípios da Bahia, por cargo, ou a força de cada candidato." },
-      { property: "og:title", content: "Mapa por município — Data Analytics | Bahia 2026" },
+      { property: "og:title", content: "Mapa por município — Data5 Analytics | Eleições 2026 - BA" },
       { property: "og:description", content: "Vencedor por município e mapa de calor por candidato." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

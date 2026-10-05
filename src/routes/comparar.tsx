@@ -7,9 +7,9 @@ import { PageHead, Card, Loading, Select, Btn, Stat } from "@/components/ui-bits
 export const Route = createFileRoute("/comparar")({
   head: () => ({
     meta: [
-      { title: "Comparar candidatos — Data Analytics | Bahia 2026" },
+      { title: "Comparar candidatos — Data5 Analytics | Eleições 2026 - BA" },
       { name: "description", content: "Compare até 4 candidatos do mesmo cargo na Bahia: votos, municípios vencidos e regiões." },
-      { property: "og:title", content: "Comparar candidatos — Data Analytics | Bahia 2026" },
+      { property: "og:title", content: "Comparar candidatos — Data5 Analytics | Eleições 2026 - BA" },
       { property: "og:description", content: "Mapa de confronto direto e diferença de votos por município." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
