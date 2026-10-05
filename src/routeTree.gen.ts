@@ -10,12 +10,21 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CompararRouteImport } from './routes/comparar'
 import { Route as MapaRouteImport } from './routes/mapa'
+import { Route as RelatoriosRouteImport } from './routes/relatorios'
+import { Route as CandidatoIdRouteImport } from './routes/candidato.$id'
 import { Route as CargoCargoRouteImport } from './routes/cargo.$cargo'
+import { Route as MunicipioCodigoRouteImport } from './routes/municipio.$codigo'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompararRoute = CompararRouteImport.update({
+  id: '/comparar',
+  path: '/comparar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapaRoute = MapaRouteImport.update({
@@ -23,40 +32,93 @@ const MapaRoute = MapaRouteImport.update({
   path: '/mapa',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RelatoriosRoute = RelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CandidatoIdRoute = CandidatoIdRouteImport.update({
+  id: '/candidato/$id',
+  path: '/candidato/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CargoCargoRoute = CargoCargoRouteImport.update({
   id: '/cargo/$cargo',
   path: '/cargo/$cargo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MunicipioCodigoRoute = MunicipioCodigoRouteImport.update({
+  id: '/municipio/$codigo',
+  path: '/municipio/$codigo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/comparar': typeof CompararRoute
   '/mapa': typeof MapaRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/candidato/$id': typeof CandidatoIdRoute
   '/cargo/$cargo': typeof CargoCargoRoute
+  '/municipio/$codigo': typeof MunicipioCodigoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/comparar': typeof CompararRoute
   '/mapa': typeof MapaRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/candidato/$id': typeof CandidatoIdRoute
   '/cargo/$cargo': typeof CargoCargoRoute
+  '/municipio/$codigo': typeof MunicipioCodigoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/comparar': typeof CompararRoute
   '/mapa': typeof MapaRoute
+  '/relatorios': typeof RelatoriosRoute
+  '/candidato/$id': typeof CandidatoIdRoute
   '/cargo/$cargo': typeof CargoCargoRoute
+  '/municipio/$codigo': typeof MunicipioCodigoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/mapa' | '/cargo/$cargo'
+  fullPaths:
+    | '/'
+    | '/comparar'
+    | '/mapa'
+    | '/relatorios'
+    | '/candidato/$id'
+    | '/cargo/$cargo'
+    | '/municipio/$codigo'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/mapa' | '/cargo/$cargo'
-  id: '__root__' | '/' | '/mapa' | '/cargo/$cargo'
+  to:
+    | '/'
+    | '/comparar'
+    | '/mapa'
+    | '/relatorios'
+    | '/candidato/$id'
+    | '/cargo/$cargo'
+    | '/municipio/$codigo'
+  id:
+    | '__root__'
+    | '/'
+    | '/comparar'
+    | '/mapa'
+    | '/relatorios'
+    | '/candidato/$id'
+    | '/cargo/$cargo'
+    | '/municipio/$codigo'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CompararRoute: typeof CompararRoute
   MapaRoute: typeof MapaRoute
+  RelatoriosRoute: typeof RelatoriosRoute
+  CandidatoIdRoute: typeof CandidatoIdRoute
   CargoCargoRoute: typeof CargoCargoRoute
+  MunicipioCodigoRoute: typeof MunicipioCodigoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,11 +130,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/comparar': {
+      id: '/comparar'
+      path: '/comparar'
+      fullPath: '/comparar'
+      preLoaderRoute: typeof CompararRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/mapa': {
       id: '/mapa'
       path: '/mapa'
       fullPath: '/mapa'
       preLoaderRoute: typeof MapaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/relatorios': {
+      id: '/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof RelatoriosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/candidato/$id': {
+      id: '/candidato/$id'
+      path: '/candidato/$id'
+      fullPath: '/candidato/$id'
+      preLoaderRoute: typeof CandidatoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cargo/$cargo': {
@@ -82,13 +165,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CargoCargoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/municipio/$codigo': {
+      id: '/municipio/$codigo'
+      path: '/municipio/$codigo'
+      fullPath: '/municipio/$codigo'
+      preLoaderRoute: typeof MunicipioCodigoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CompararRoute: CompararRoute,
   MapaRoute: MapaRoute,
+  RelatoriosRoute: RelatoriosRoute,
+  CandidatoIdRoute: CandidatoIdRoute,
   CargoCargoRoute: CargoCargoRoute,
+  MunicipioCodigoRoute: MunicipioCodigoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

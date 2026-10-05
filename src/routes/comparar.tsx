@@ -60,7 +60,7 @@ function Comparar() {
         ))}
       </div>
 
-      <div className={`mb-5 grid gap-3 grid-cols-2 md:grid-cols-${Math.max(2, cands.length)}`}>
+      <div className="mb-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {cands.map((c, k) => (
           <div key={c.id} className="rounded-md border-t-4 bg-card p-4" style={{ borderColor: SERIES[k] }}>
             <Link to="/candidato/$id" params={{ id: c.id }} className="font-display text-xl font-bold hover:underline">{c.nome}</Link>
