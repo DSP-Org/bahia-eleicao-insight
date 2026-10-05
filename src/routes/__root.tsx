@@ -9,6 +9,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import logoUrl from "../assets/logo-barras.png";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -56,7 +57,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", type: "image/png", href: "/favicon.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" },
       { rel: "stylesheet", href: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },
@@ -96,9 +98,9 @@ function RootComponent() {
       <div className="min-h-screen">
         <header className="border-b border-border bg-card">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
-            <Link to="/" className="font-display text-2xl font-black">
-              Data5 Analytics<span className="text-primary">·</span>
-              <span className="ml-2 align-middle font-sans text-xs font-medium uppercase tracking-wide text-muted-foreground">Eleições 2026 - BA</span>
+            <Link to="/" className="flex items-center gap-3">
+              <img src={logoUrl} alt="Data5 Analytics" className="h-11 w-auto" width={1280} height={640} />
+              <span className="border-l border-border pl-3 font-sans text-xs font-medium uppercase tracking-wide text-muted-foreground">Eleições 2026 - BA</span>
             </Link>
             <nav className="flex flex-wrap gap-1 text-sm">
               {NAV.map((n) => (
