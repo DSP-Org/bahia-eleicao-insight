@@ -207,9 +207,6 @@ function Envio({ pin, onSalvo }: { pin: string; onSalvo: (id: string) => void })
             try { setLido({ ...(await lerPlanilha(f, muns)), arquivo: f.name }); } catch (er) { setLido(null); setErro(er instanceof Error ? er.message : "Não consegui ler a planilha."); }
           }} />
         </label>
-        <label className="grid gap-1 text-sm">Senha de envio
-          <input type="password" value={senha} onChange={(e) => setSenha(e.target.value)} className="rounded-md border border-input bg-background px-3 py-2" autoComplete="off" />
-        </label>
       </div>
       <p className="mt-3 text-sm text-muted-foreground">
         A planilha deve ter uma coluna <b>Município</b> (ou <b>Código IBGE/TSE</b>) e uma coluna <b>Meta</b> com o número de votos planejado.{" "}
@@ -227,7 +224,7 @@ function Envio({ pin, onSalvo }: { pin: string; onSalvo: (id: string) => void })
   );
 }
 
-function Analise({ plano }: { plano: Plano }) {
+function Analise({ plano, pin }: { plano: Plano; pin: string }) {
   const { data: meta } = useMeta();
   const { data: md } = useMunData(plano.cargo);
   const { data: muns } = useMunicipios();
