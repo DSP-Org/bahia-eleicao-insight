@@ -23,7 +23,8 @@ export async function downloadReportPDF(report: Report) {
   const bold = await doc.embedFont(boldBytes, { subset: true });
   const css = getComputedStyle(document.documentElement);
   const color = (token: string) => {
-    const hex = css.getPropertyValue(token).trim().replace("#", "");
+    const raw = css.getPropertyValue(token).trim().replace("#", "");
+    const hex = raw.length === 3 ? [...raw].map((c) => c + c).join("") : raw;
     return rgb(parseInt(hex.slice(0, 2), 16) / 255, parseInt(hex.slice(2, 4), 16) / 255, parseInt(hex.slice(4, 6), 16) / 255);
   };
   const ink = color("--report-ink"), muted = color("--report-muted"), accent = color("--report-accent");
