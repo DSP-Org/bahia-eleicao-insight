@@ -5,8 +5,8 @@ import { useGeo } from "@/lib/eleicoes";
 type Props = {
   fill: (ibge: string) => string;
   tooltip: (ibge: string) => string;
-  onSelect?: (ibge: string) => void;
-  selected?: string;
+  onSelect?: ((ibge: string) => void) | undefined;
+  selected?: string | undefined;
   height?: number;
 };
 
