@@ -41,6 +41,7 @@ export async function downloadReportPDF(report: Report) {
       const proposed = current ? `${current} ${word}` : word;
       if (face.widthOfTextAtSize(proposed, size) <= maxWidth) { current = proposed; continue; }
       if (current) { lines.push(current); current = ""; }
+      if (face.widthOfTextAtSize(word, size) <= maxWidth) { current = word; continue; }
       for (const char of word) {
         if (face.widthOfTextAtSize(current + char, size) > maxWidth && current) { lines.push(current); current = ""; }
         current += char;
@@ -87,6 +88,7 @@ export async function downloadReportPDF(report: Report) {
 
   const weights = report.headers.map((h, i) => {
     if (i === 0) return 1.9;
+    if (h === "Municípios") return 1.25;
     if (/Região|Vencedor|reduto|^1º|^2º|^3º/.test(h)) return 1.65;
     if (/^% /.test(h)) return 1.2;
     return 1;
