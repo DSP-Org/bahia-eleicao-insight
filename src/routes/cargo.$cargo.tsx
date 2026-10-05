@@ -113,7 +113,7 @@ function CargoPage() {
           <div className="overflow-x-auto">
             <table className="mobile-records w-full text-sm">
               <thead className="text-left text-xs uppercase text-muted-foreground">
-                <tr><th className="py-1">#</th><th>Candidato</th><th>Nº</th><th>Partido</th><th className="hidden md:table-cell">Coligação/Federação</th><th className="text-right">Votos</th><th className="text-right">%</th><th>Situação</th></tr>
+                <tr><th className="py-1">#</th><th>Candidato</th><th>Nº</th><th>Partido</th><th className="hidden lg:table-cell">Coligação/Federação</th><th className="text-right">Votos</th><th className="text-right">%</th><th>Situação</th></tr>
               </thead>
               <tbody>
                 {list.slice(0, 300).map((c, i) => (
@@ -122,7 +122,7 @@ function CargoPage() {
                     <td data-label="Candidato" className="record-title"><Link to="/candidato/$id" params={{ id: c.id }} className="font-medium hover:underline">{c.nome}</Link></td>
                     <td data-label="Número" className="font-mono">{c.n}</td>
                     <td data-label="Partido">{c.partido}</td>
-                    <td data-label="Coligação/Federação" className="mobile-omit hidden max-w-xs truncate text-muted-foreground md:table-cell">{c.agr}</td>
+                    <td data-label="Coligação/Federação" className="mobile-omit hidden max-w-xs truncate text-muted-foreground lg:table-cell">{c.agr}</td>
                     <td data-label="Votos" className="text-right font-mono">{nf(c.votos)}</td>
                     <td data-label="% válidos" className="text-right font-mono">{pf(c.pct)}</td>
                     <td data-label="Situação" className={c.eleito || c.sitTipo === "eleito" ? "font-semibold text-primary" : "text-muted-foreground"}>{c.sit || c.situacao || (c.valido !== "Válido" ? c.valido : "")}</td>
