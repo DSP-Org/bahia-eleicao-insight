@@ -135,14 +135,19 @@ function Comparar() {
             tooltip={(ibge) => { const r = rows.find((x) => x.m.ibge === ibge); return r ? `<b>${r.m.nome}</b><br/>` + cands.map((c, k) => `${c.nome}: ${pf(pct(r.vs[k], r.vv))}`).join("<br/>") : ""; }}
             height={500} /> : <Loading />}
         </Card>
-        <Card title={cands.length > 1 ? `Maiores diferenças (${cands[0].nome} − ${cands[1].nome})` : "Diferenças"}
-          action={<Btn onClick={() => downloadCSV(`comparativo-${slug}.csv`, [["Município", ...cands.map((c) => c.nome)], ...rows.map((r) => [r.m.nome, ...r.vs])])}>CSV</Btn>}>
+        <Card title="Maiores vantagens de cada um"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Btn onClick={() => downloadCSV(`comparativo-${slug}.csv`, [["Município", ...cands.map((c) => c.nome)], ...rows.map((r) => [r.m.nome, ...r.vs])])}>CSV</Btn>
+              <Btn onClick={baixarPDF} disabled={pdfBusy}>{pdfBusy ? "Gerando…" : "Baixar PDF"}</Btn>
+            </div>}>
           {cands.length > 1 && (
             <div className="grid gap-4 text-sm sm:grid-cols-2">
-              {[[...rows].sort((a, b) => b.diff - a.diff), [...rows].sort((a, b) => a.diff - b.diff)].map((l, k) => (
-                <div key={k}>
-                  <p className="mb-1 text-xs font-semibold" style={{ color: SERIES[k] }}>Vantagem {cands[k].nome}</p>
-                  <ol className="space-y-1">{l.slice(0, 15).map((r) => <li key={r.m.tse} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border"><span className="truncate">{r.m.nome}</span><span className="font-mono">{nf(Math.abs(r.diff))}</span></li>)}</ol>
+              {vantagens.map((l, k) => (
+                <div key={k} className="min-w-0">
+                  <p className="mb-1 break-words text-xs font-semibold" style={{ color: SERIES[k] }}>Vantagem {cands[k].nome}</p>
+                  <ol className="space-y-1">{l.map(({ r, v }) => <li key={r.m.tse} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border"><span className="truncate">{r.m.nome}</span><span className="font-mono">{nf(v)}</span></li>)}</ol>
+                  {!l.length && <p className="text-xs text-muted-foreground">Não lidera em nenhum município.</p>}
                 </div>
               ))}
             </div>
