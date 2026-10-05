@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CompararRouteImport } from './routes/comparar'
 import { Route as MapaRouteImport } from './routes/mapa'
+import { Route as MetaXUrnaRouteImport } from './routes/meta-x-urna'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as CandidatoIdRouteImport } from './routes/candidato.$id'
 import { Route as CargoCargoRouteImport } from './routes/cargo.$cargo'
@@ -30,6 +31,11 @@ const CompararRoute = CompararRouteImport.update({
 const MapaRoute = MapaRouteImport.update({
   id: '/mapa',
   path: '/mapa',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MetaXUrnaRoute = MetaXUrnaRouteImport.update({
+  id: '/meta-x-urna',
+  path: '/meta-x-urna',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RelatoriosRoute = RelatoriosRouteImport.update({
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/comparar': typeof CompararRoute
   '/mapa': typeof MapaRoute
+  '/meta-x-urna': typeof MetaXUrnaRoute
   '/relatorios': typeof RelatoriosRoute
   '/candidato/$id': typeof CandidatoIdRoute
   '/cargo/$cargo': typeof CargoCargoRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/comparar': typeof CompararRoute
   '/mapa': typeof MapaRoute
+  '/meta-x-urna': typeof MetaXUrnaRoute
   '/relatorios': typeof RelatoriosRoute
   '/candidato/$id': typeof CandidatoIdRoute
   '/cargo/$cargo': typeof CargoCargoRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/comparar': typeof CompararRoute
   '/mapa': typeof MapaRoute
+  '/meta-x-urna': typeof MetaXUrnaRoute
   '/relatorios': typeof RelatoriosRoute
   '/candidato/$id': typeof CandidatoIdRoute
   '/cargo/$cargo': typeof CargoCargoRoute
@@ -87,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/comparar'
     | '/mapa'
+    | '/meta-x-urna'
     | '/relatorios'
     | '/candidato/$id'
     | '/cargo/$cargo'
@@ -96,6 +106,7 @@ export interface FileRouteTypes {
     | '/'
     | '/comparar'
     | '/mapa'
+    | '/meta-x-urna'
     | '/relatorios'
     | '/candidato/$id'
     | '/cargo/$cargo'
@@ -105,6 +116,7 @@ export interface FileRouteTypes {
     | '/'
     | '/comparar'
     | '/mapa'
+    | '/meta-x-urna'
     | '/relatorios'
     | '/candidato/$id'
     | '/cargo/$cargo'
@@ -115,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CompararRoute: typeof CompararRoute
   MapaRoute: typeof MapaRoute
+  MetaXUrnaRoute: typeof MetaXUrnaRoute
   RelatoriosRoute: typeof RelatoriosRoute
   CandidatoIdRoute: typeof CandidatoIdRoute
   CargoCargoRoute: typeof CargoCargoRoute
@@ -142,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/mapa'
       fullPath: '/mapa'
       preLoaderRoute: typeof MapaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/meta-x-urna': {
+      id: '/meta-x-urna'
+      path: '/meta-x-urna'
+      fullPath: '/meta-x-urna'
+      preLoaderRoute: typeof MetaXUrnaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/relatorios': {
@@ -179,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CompararRoute: CompararRoute,
   MapaRoute: MapaRoute,
+  MetaXUrnaRoute: MetaXUrnaRoute,
   RelatoriosRoute: RelatoriosRoute,
   CandidatoIdRoute: CandidatoIdRoute,
   CargoCargoRoute: CargoCargoRoute,
