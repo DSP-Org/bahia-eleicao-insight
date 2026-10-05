@@ -24,6 +24,7 @@ function Comparar() {
   const { data: meta } = useMeta();
   const cargo = meta?.cargos.find((c) => c.slug === slug);
   const [ids, setIds] = useState<string[]>([]);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const { data: md } = useMunData(slug);
   const { data: muns } = useMunicipios();
   const { byIbge } = useIbgeIndex(muns);
@@ -44,6 +45,46 @@ function Comparar() {
   const cands = idxs.map((i) => cargo.candidatos[i]);
   const wins = cands.map((_, k) => rows.filter((r) => r.w === k && r.vs[k] > 0).length);
   const setAt = (k: number, id: string) => { const n = [...sel]; n[k] = id; setIds(n.filter(Boolean)); };
+
+  // Vantagem de cada candidato sobre o melhor dos demais, por município.
+  const vantagens = cands.map((_, k) =>
+    rows
+      .map((r) => ({ r, v: r.vs[k] - Math.max(...r.vs.filter((_, j) => j !== k)) }))
+      .filter((x) => x.v > 0)
+      .sort((a, b) => b.v - a.v)
+      .slice(0, 15),
+  );
+
+  const baixarPDF = async () => {
+    setPdfBusy(true);
+    try {
+      const { downloadReportPDF } = await import("@/lib/report-pdf");
+      const ordenados = [...rows].sort((a, b) => b.vs[b.w] - a.vs[a.w]);
+      await downloadReportPDF({
+        title: `Comparativo — ${cargo.nome}`,
+        cargo: cargo.nome,
+        filter: cands.map((c) => c.nome).join(" × "),
+        headers: ["Município", ...cands.map((c) => c.nome), "Vencedor", "Diferença"],
+        rows: ordenados.map((r) => [
+          r.m.nome,
+          ...r.vs,
+          r.vs[r.w] > 0 ? cands[r.w].nome : "—",
+          r.vs.length > 1 ? r.vs[r.w] - Math.max(...r.vs.filter((_, j) => j !== r.w)) : r.vs[0],
+        ]),
+        summary: [
+          ...cands.slice(0, 3).map((c, k) => ({ label: c.nome, value: nf(c.votos) })),
+          { label: "Municípios", value: nf(rows.length) },
+        ],
+        ranking: cands.map((c, k) => ({
+          name: c.nome,
+          value: `${nf(wins[k])} municípios`,
+          share: rows.length ? wins[k] / rows.length : 0,
+        })),
+      });
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   return (
     <div>
@@ -78,10 +119,10 @@ function Comparar() {
           <div key={c.id} className="rounded-md border-t-4 bg-card p-4" style={{ borderColor: SERIES[k] }}>
             <Link to="/candidato/$id" params={{ id: c.id }} className="font-display text-xl font-bold hover:underline">{c.nome}</Link>
             <p className="text-sm text-muted-foreground">{c.partido} · {c.sit || c.situacao || "—"}</p>
-            <div className="mt-3 flex flex-wrap items-end gap-2">
-              <Stat label="Votos" value={<span className="text-base">{nf(c.votos)}</span>} />
-              <Stat label="%" value={<span className="text-base">{pf(c.pct)}</span>} />
-              <Stat label="Vence em" value={<span className="text-base">{wins[k]}</span>} sub="municípios" />
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <Stat label="Votos" value={nf(c.votos)} />
+              <Stat label="% válidos" value={pf(c.pct)} />
+              <Stat label="Vence em" value={nf(wins[k])} sub="municípios vencidos" />
             </div>
           </div>
         ))}
@@ -94,14 +135,19 @@ function Comparar() {
             tooltip={(ibge) => { const r = rows.find((x) => x.m.ibge === ibge); return r ? `<b>${r.m.nome}</b><br/>` + cands.map((c, k) => `${c.nome}: ${pf(pct(r.vs[k], r.vv))}`).join("<br/>") : ""; }}
             height={500} /> : <Loading />}
         </Card>
-        <Card title={cands.length > 1 ? `Maiores diferenças (${cands[0].nome} − ${cands[1].nome})` : "Diferenças"}
-          action={<Btn onClick={() => downloadCSV(`comparativo-${slug}.csv`, [["Município", ...cands.map((c) => c.nome)], ...rows.map((r) => [r.m.nome, ...r.vs])])}>CSV</Btn>}>
+        <Card title="Maiores vantagens de cada um"
+          action={
+            <div className="flex flex-wrap gap-2">
+              <Btn onClick={() => downloadCSV(`comparativo-${slug}.csv`, [["Município", ...cands.map((c) => c.nome)], ...rows.map((r) => [r.m.nome, ...r.vs])])}>CSV</Btn>
+              <Btn onClick={baixarPDF} disabled={pdfBusy}>{pdfBusy ? "Gerando…" : "Baixar PDF"}</Btn>
+            </div>}>
           {cands.length > 1 && (
             <div className="grid gap-4 text-sm sm:grid-cols-2">
-              {[[...rows].sort((a, b) => b.diff - a.diff), [...rows].sort((a, b) => a.diff - b.diff)].map((l, k) => (
-                <div key={k}>
-                  <p className="mb-1 text-xs font-semibold" style={{ color: SERIES[k] }}>Vantagem {cands[k].nome}</p>
-                  <ol className="space-y-1">{l.slice(0, 15).map((r) => <li key={r.m.tse} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border"><span className="truncate">{r.m.nome}</span><span className="font-mono">{nf(Math.abs(r.diff))}</span></li>)}</ol>
+              {vantagens.map((l, k) => (
+                <div key={k} className="min-w-0">
+                  <p className="mb-1 break-words text-xs font-semibold" style={{ color: SERIES[k] }}>Vantagem {cands[k].nome}</p>
+                  <ol className="space-y-1">{l.map(({ r, v }) => <li key={r.m.tse} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 border-b border-border"><span className="truncate">{r.m.nome}</span><span className="font-mono">{nf(v)}</span></li>)}</ol>
+                  {!l.length && <p className="text-xs text-muted-foreground">Não lidera em nenhum município.</p>}
                 </div>
               ))}
             </div>
