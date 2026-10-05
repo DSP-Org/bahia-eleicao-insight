@@ -116,7 +116,7 @@ function Indicadores() {
       </div>
 
       {gruposUteis.length > 2 && <div className="mb-6 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap" role="group" aria-label="Categorias de indicadores">
-        {gruposUteis.map(({ id, label, icon: Icon }) => <Button key={id} variant={grupo === id ? "default" : "outline"} aria-pressed={grupo === id} onClick={() => setGrupo(id)} className="h-11 min-w-0 gap-1.5 px-2 text-xs sm:px-3 sm:text-sm"><Icon aria-hidden="true" />{label}<span className="font-mono text-[0.7em] opacity-70">{contagem(id)}</span></Button>)}
+        {gruposUteis.map(({ id, label, icon: Icon }) => <Button key={id} variant={grupoAtivo === id ? "default" : "outline"} aria-pressed={grupoAtivo === id} onClick={() => setGrupo(id)} className="h-11 min-w-0 gap-1.5 px-2 text-xs sm:px-3 sm:text-sm"><Icon aria-hidden="true" />{label}<span className="font-mono text-[0.7em] opacity-70">{contagem(id)}</span></Button>)}
       </div>}
 
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
