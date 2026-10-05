@@ -345,34 +345,42 @@ function Controle({
         </Campo>
       );
     }
-    case "escopo":
+    case "escopo": {
+      const escopoAtual = st.escopo ?? "ba";
+      const itens = [
+        { v: "ba", nome: "Bahia inteira", grupo: "" },
+        ...(Object.keys(REGIOES) as (keyof typeof REGIOES)[]).flatMap((k) =>
+          nomesRegioes(k, B.muns).map((n) => ({ v: `${k}:${n}`, nome: n, grupo: REGIOES[k] })),
+        ),
+        ...B.muns.map((m) => ({ v: `mun:${m.tse}`, nome: m.nome, grupo: "Município" })),
+      ];
+      const rotuloAtual = itens.find((i) => i.v === escopoAtual)?.nome ?? "Bahia inteira";
       return (
-        <Campo rotulo="Recorte">
-          <Select
-            value={st.escopo ?? "ba"}
-            onChange={(v) => definir("escopo", v)}
-            className="max-w-72"
-          >
-            <option value="ba">Bahia inteira</option>
-            {(Object.keys(REGIOES) as (keyof typeof REGIOES)[]).map((k) => (
-              <optgroup key={k} label={REGIOES[k]}>
-                {nomesRegioes(k, B.muns).map((n) => (
-                  <option key={n} value={`${k}:${n}`}>
-                    {n}
-                  </option>
-                ))}
-              </optgroup>
-            ))}
-            <optgroup label="Município">
-              {B.muns.map((m) => (
-                <option key={m.tse} value={`mun:${m.tse}`}>
-                  {m.nome}
-                </option>
-              ))}
-            </optgroup>
-          </Select>
+        <Campo rotulo={`Recorte: ${rotuloAtual}`} largo>
+          <BuscaItem
+            itens={itens}
+            rotulo="Buscar recorte"
+            placeholder="Região ou município (ex.: Salvador, Feira de Santana)"
+            busca={(i) => slugBusca(`${i.nome} ${i.grupo}`)}
+            onEscolher={(i) => definir("escopo", i.v)}
+            render={(i) => (
+              <>
+                <b>{i.nome}</b>{" "}
+                {i.grupo && <span className="text-muted-foreground">· {i.grupo}</span>}
+              </>
+            )}
+          />
+          {escopoAtual !== "ba" && (
+            <button
+              onClick={() => definir("escopo", "ba")}
+              className="mt-1 text-xs text-primary underline"
+            >
+              Voltar para Bahia inteira
+            </button>
+          )}
         </Campo>
       );
+    }
     case "agrupar":
       return (
         <Campo rotulo="Agrupar por">
