@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import logoUrl from "../assets/logo-barras.png";
+import { InstallAppBanner } from "../components/InstallApp";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -50,6 +51,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "theme-color", content: "#bd303c" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Eleições 2026 - BA" },
       { title: "Data5 Analytics — Eleições 2026 - BA" },
       { name: "description", content: "Resultados oficiais do TSE das Eleições 2026 na Bahia: mapas, relatórios e comparativos." },
       { property: "og:type", content: "website" },
@@ -59,6 +64,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" },
       { rel: "stylesheet", href: "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" },
@@ -98,6 +104,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen">
+        <InstallAppBanner />
         <header className="border-b border-border bg-card">
           <div className="mx-auto grid max-w-7xl gap-3 px-4 py-3 md:flex md:flex-wrap md:items-center md:justify-between">
             <Link to="/" className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
