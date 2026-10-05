@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
+import reportLogo from "@/assets/logo-relatorio.png.asset.json";
 
 type Report = {
   title: string; cargo: string; filter: string; headers: string[];
@@ -13,12 +14,14 @@ export async function downloadReportPDF(report: Report) {
   doc.registerFontkit(fontkit);
   const load = async (path: string) => {
     const response = await fetch(path);
-    if (!response.ok) throw new Error("Não foi possível carregar as fontes do PDF.");
+    if (!response.ok) throw new Error("Não foi possível carregar os recursos do PDF.");
     return response.arrayBuffer();
   };
-  const [regularBytes, boldBytes] = await Promise.all([
-    load("/fonts/report-regular.ttf"), load("/fonts/report-bold.ttf"),
+  const [regularBytes, boldBytes, logoBytes] = await Promise.all([
+    load("/fonts/report-regular.ttf"), load("/fonts/report-bold.ttf"), load(reportLogo.url),
   ]);
+  const logo = await doc.embedPng(logoBytes);
+  const logoSize = logo.scaleToFit(120, 39);
   const font = await doc.embedFont(regularBytes, { subset: true });
   const bold = await doc.embedFont(boldBytes, { subset: true });
   const css = getComputedStyle(document.documentElement);
@@ -53,7 +56,7 @@ export async function downloadReportPDF(report: Report) {
   const newPage = () => {
     const p = doc.addPage([W, H]);
     p.drawRectangle({ x: 0, y: 0, width: W, height: H, color: paper });
-    text(p, "Data5 Analytics", margin, H - 39, 18, true);
+    p.drawImage(logo, { x: margin, y: H - 46, width: logoSize.width, height: logoSize.height });
     text(p, "ELEIÇÕES 2026 - BA", W - 208, H - 35, 9, true, muted);
     p.drawLine({ start: { x: margin, y: H - 52 }, end: { x: W - margin, y: H - 52 }, color: accent, thickness: 2 });
     return p;
