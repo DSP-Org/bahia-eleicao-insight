@@ -134,6 +134,7 @@ function CargoPage() {
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar nome, partido, número" aria-label="Buscar candidatos" className="w-full min-w-0 sm:w-auto rounded-md border border-input bg-background px-3 py-1.5 text-sm" />
             <Btn onClick={() => setSort(sort === "votos" ? "nome" : "votos")}>Ordenar: {sort}</Btn>
             <Btn onClick={() => downloadCSV(`candidatos-${slug}.csv`, [["Nome", "Número", "Partido", "Coligação", "Votos", "%", "Situação"], ...cargo.candidatos.map((c) => [c.nome, c.n, c.partido, c.agr, c.votos, c.pct, c.sit || c.situacao])])}>CSV</Btn>
+            <Btn onClick={baixarPDF} disabled={pdfBusy}>{pdfBusy ? "Gerando…" : "Baixar PDF"}</Btn>
           </div>}>
           <div className="overflow-x-auto">
             <table className="mobile-records w-full text-sm">
