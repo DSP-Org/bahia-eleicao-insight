@@ -98,6 +98,7 @@ function RootComponent() {
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
             <Link to="/" className="font-display text-2xl font-black">
               Data5 Analytics<span className="text-primary">·</span>
+              <span className="ml-2 align-middle font-sans text-xs font-medium uppercase tracking-wide text-muted-foreground">Eleições 2026 - BA</span>
             </Link>
             <nav className="flex flex-wrap gap-1 text-sm">
               {NAV.map((n) => (
