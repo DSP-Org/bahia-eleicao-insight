@@ -67,23 +67,21 @@ function MapaPage() {
         <Select value={slug} onChange={(v) => { setSlug(v); setCand(""); }}>
           {CARGOS.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}
         </Select>
-        {candIdx >= 0 ? (
-          <div className="flex w-full min-w-0 items-center justify-between gap-2 rounded-md border border-input bg-background px-3 py-2 text-sm">
-            <span className="truncate">Força de: <b>{cargo.candidatos[candIdx].nome}</b> <span className="text-muted-foreground">({cargo.candidatos[candIdx].partido})</span></span>
-            <button aria-label="Voltar ao mapa de vencedores" title="Voltar ao mapa de vencedores" onClick={() => setCand("")} className="text-muted-foreground hover:text-foreground">×</button>
-          </div>
-        ) : (
-          <div className="w-full min-w-0 sm:w-80">
-            <BuscaItem
-              itens={cargo.candidatos}
-              busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)}
-              placeholder="Força de um candidato… (padrão: vencedor)"
-              rotulo="Buscar candidato para colorir o mapa"
-              render={(c) => <span>{c.nome} <span className="text-muted-foreground">({c.partido})</span></span>}
-              onEscolher={(c) => setCand(c.id)}
-            />
-          </div>
-        )}
+        <div className="w-full min-w-0 sm:w-80">
+          <BuscaItem
+            itens={cargo.candidatos}
+            busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)}
+            placeholder="Força de um candidato… (padrão: vencedor)"
+            rotulo="Buscar candidato para colorir o mapa"
+            render={(c) => <span>{c.nome} <span className="text-muted-foreground">({c.partido})</span></span>}
+            chip={(c) => <>Força de: <b className="font-medium">{c.nome}</b> <span className="text-muted-foreground">({c.partido})</span></>}
+            selecionado={candIdx >= 0 ? cargo.candidatos[candIdx] : null}
+            onLimpar={() => setCand("")}
+            rotuloLimpar="Voltar ao mapa de vencedores"
+            onEscolher={(c) => setCand(c.id)}
+          />
+        </div>
+
       </div>
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div>

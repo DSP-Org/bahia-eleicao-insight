@@ -60,7 +60,7 @@ function CargoPage() {
           <Link to="/relatorios" search={{ r: "faltou", cargo: slug }} className="text-primary underline">Ver eleitos, suplentes e quanto faltou</Link>
         </p>
       )}
-      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-5">
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <Stat label="Votos válidos" value={nf(r.validos)} />
         <Stat label="Brancos" value={pf(pct(r.brancos, r.total))} sub={nf(r.brancos)} />
         <Stat label="Nulos" value={pf(pct(r.nulos, r.total))} sub={nf(r.nulos)} />

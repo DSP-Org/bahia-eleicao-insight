@@ -149,17 +149,14 @@ function Envio({ onSalvo }: { onSalvo: (id: string) => void }) {
           </Select>
         </label>
         <div className="grid gap-1 text-sm">Candidato
-          {cand ? (
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-input bg-background px-3 py-2">
-              <span>{cand.nome} · {cand.partido} {cand.n}</span>
-              <button aria-label="Trocar candidato" onClick={() => setCandId("")} className="px-1 text-muted-foreground hover:text-foreground">×</button>
-            </div>
-          ) : (
-            <BuscaItem rotulo="Buscar candidato" placeholder="Digite nome, partido ou número…" itens={cargo.candidatos}
-              busca={(c) => slugify(`${c.nome} ${c.nomeCompleto} ${c.partido} ${c.n}`)}
-              render={(c) => <span>{c.nome} <span className="text-muted-foreground">· {c.partido} {c.n} · {nf(c.votos)} votos</span></span>}
-              onEscolher={(c) => setCandId(c.id)} />
-          )}
+          <BuscaItem rotulo="Buscar candidato" placeholder="Digite nome, partido ou número…" itens={cargo.candidatos}
+            busca={(c) => slugify(`${c.nome} ${c.nomeCompleto} ${c.partido} ${c.n}`)}
+            render={(c) => <span>{c.nome} <span className="text-muted-foreground">· {c.partido} {c.n} · {nf(c.votos)} votos</span></span>}
+            chip={(c) => <>{c.nome} <span className="text-muted-foreground">· {c.partido} {c.n}</span></>}
+            selecionado={cand ?? null}
+            onLimpar={() => setCandId("")}
+            onEscolher={(c) => setCandId(c.id)} />
+
         </div>
         <label className="grid gap-1 text-sm">Planilha (Excel ou CSV)
           <input type="file" accept=".xlsx,.xls,.csv" className="w-full min-w-0 text-sm" onChange={async (e) => {
