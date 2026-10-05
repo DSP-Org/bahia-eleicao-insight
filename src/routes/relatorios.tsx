@@ -8,9 +8,11 @@ export const Route = createFileRoute("/relatorios")({
   head: () => ({
     meta: [
       { title: "Relatórios — Data Analytics | Bahia 2026" },
-      { name: "description", content: "Tabelas por município, região, partido e concentração de votos, com exportação CSV." },
+      { name: "description", content: "Data Analytics: relatórios das Eleições 2026 na Bahia por município, região e concentração de votos, em PDF e CSV." },
       { property: "og:title", content: "Relatórios — Data Analytics | Bahia 2026" },
-      { property: "og:description", content: "Relatórios completos com filtro e download em CSV." },
+      { property: "og:description", content: "Relatórios completos com filtro e download em PDF e CSV." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: Relatorios,
@@ -96,7 +98,7 @@ function Relatorios() {
         ],
         ranking: cargo.candidatos.slice(0, 3).map((c) => ({ name: `${c.nome} (${c.partido})`, value: `${nf(c.votos)} votos · ${pf(c.pct)}`, share: c.pct / 100 })),
       });
-    } catch { setPdfError("Não foi possível gerar o PDF. Tente novamente."); }
+    } catch (error) { console.error("Falha ao gerar relatório PDF", error); setPdfError("Não foi possível gerar o PDF. Tente novamente."); }
     finally { setExporting(false); }
   };
 
