@@ -49,7 +49,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Data Analytics — Eleições 2026 na Bahia" },
+      { title: "Data5 Analytics — Eleições 2026 - BA" },
       { name: "description", content: "Resultados oficiais do TSE das Eleições 2026 na Bahia: mapas, relatórios e comparativos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -97,7 +97,8 @@ function RootComponent() {
         <header className="border-b border-border bg-card">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3">
             <Link to="/" className="font-display text-2xl font-black">
-              Data Analytics<span className="text-primary">·</span>
+              Data5 Analytics<span className="text-primary">·</span>
+              <span className="ml-2 align-middle font-sans text-xs font-medium uppercase tracking-wide text-muted-foreground">Eleições 2026 - BA</span>
             </Link>
             <nav className="flex flex-wrap gap-1 text-sm">
               {NAV.map((n) => (
@@ -116,7 +117,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
-          Data Analytics · Fonte: Tribunal Superior Eleitoral (resultados.tse.jus.br) · 1º turno, 04/10/2026 · Malha municipal: IBGE
+          Data5 Analytics · Fonte: Tribunal Superior Eleitoral (resultados.tse.jus.br) · 1º turno, 04/10/2026 · Malha municipal: IBGE
         </footer>
       </div>
     </QueryClientProvider>
