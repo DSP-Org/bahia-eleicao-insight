@@ -51,6 +51,30 @@ function CargoPage() {
   const eleitos = cargo.candidatos.filter((c) => c.eleito || c.sitTipo === "eleito").length;
   const projecao = cargo.candidatos.some((c) => c.proj);
 
+  const baixarPDF = async () => {
+    setPdfBusy(true);
+    try {
+      const { downloadReportPDF } = await import("@/lib/report-pdf");
+      const top = cargo.candidatos[0];
+      await downloadReportPDF({
+        title: `Resultado por candidato — ${cargo.nome}`,
+        cargo: cargo.nome,
+        filter: "",
+        headers: ["#", "Candidato", "Nº", "Partido", "Coligação/Federação", "Votos", "% válidos", "Situação"],
+        rows: cargo.candidatos.map((c, i) => [i + 1, c.nome, c.n, c.partido, c.agr, c.votos, pf(c.pct), c.sit || c.situacao || ""]),
+        summary: [
+          { label: "Votos válidos", value: nf(r.validos) },
+          { label: "Brancos", value: pf(pct(r.brancos, r.total)) },
+          { label: "Nulos", value: pf(pct(r.nulos, r.total)) },
+          { label: "Candidatos", value: nf(cargo.candidatos.length) },
+        ],
+        ranking: cargo.candidatos.slice(0, 3).map((c) => ({ name: c.nome, value: nf(c.votos), share: top ? c.votos / top.votos : 0 })),
+      });
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   return (
     <div>
       <CargoTabs current={slug} />
