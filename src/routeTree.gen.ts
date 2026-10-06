@@ -14,6 +14,7 @@ import { Route as CompararRouteImport } from './routes/comparar'
 import { Route as IndicadoresRouteImport } from './routes/indicadores'
 import { Route as MapaRouteImport } from './routes/mapa'
 import { Route as MetaXUrnaRouteImport } from './routes/meta-x-urna'
+import { Route as PainelRouteImport } from './routes/painel'
 import { Route as RelatoriosRouteImport } from './routes/relatorios'
 import { Route as CandidatoIdRouteImport } from './routes/candidato.$id'
 import { Route as CargoCargoRouteImport } from './routes/cargo.$cargo'
@@ -44,6 +45,11 @@ const MetaXUrnaRoute = MetaXUrnaRouteImport.update({
   path: '/meta-x-urna',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PainelRoute = PainelRouteImport.update({
+  id: '/painel',
+  path: '/painel',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RelatoriosRoute = RelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -71,6 +77,7 @@ export interface FileRoutesByFullPath {
   '/indicadores': typeof IndicadoresRoute
   '/mapa': typeof MapaRoute
   '/meta-x-urna': typeof MetaXUrnaRoute
+  '/painel': typeof PainelRoute
   '/relatorios': typeof RelatoriosRoute
   '/candidato/$id': typeof CandidatoIdRoute
   '/cargo/$cargo': typeof CargoCargoRoute
@@ -82,6 +89,7 @@ export interface FileRoutesByTo {
   '/indicadores': typeof IndicadoresRoute
   '/mapa': typeof MapaRoute
   '/meta-x-urna': typeof MetaXUrnaRoute
+  '/painel': typeof PainelRoute
   '/relatorios': typeof RelatoriosRoute
   '/candidato/$id': typeof CandidatoIdRoute
   '/cargo/$cargo': typeof CargoCargoRoute
@@ -94,6 +102,7 @@ export interface FileRoutesById {
   '/indicadores': typeof IndicadoresRoute
   '/mapa': typeof MapaRoute
   '/meta-x-urna': typeof MetaXUrnaRoute
+  '/painel': typeof PainelRoute
   '/relatorios': typeof RelatoriosRoute
   '/candidato/$id': typeof CandidatoIdRoute
   '/cargo/$cargo': typeof CargoCargoRoute
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/indicadores'
     | '/mapa'
     | '/meta-x-urna'
+    | '/painel'
     | '/relatorios'
     | '/candidato/$id'
     | '/cargo/$cargo'
@@ -118,6 +128,7 @@ export interface FileRouteTypes {
     | '/indicadores'
     | '/mapa'
     | '/meta-x-urna'
+    | '/painel'
     | '/relatorios'
     | '/candidato/$id'
     | '/cargo/$cargo'
@@ -129,6 +140,7 @@ export interface FileRouteTypes {
     | '/indicadores'
     | '/mapa'
     | '/meta-x-urna'
+    | '/painel'
     | '/relatorios'
     | '/candidato/$id'
     | '/cargo/$cargo'
@@ -141,6 +153,7 @@ export interface RootRouteChildren {
   IndicadoresRoute: typeof IndicadoresRoute
   MapaRoute: typeof MapaRoute
   MetaXUrnaRoute: typeof MetaXUrnaRoute
+  PainelRoute: typeof PainelRoute
   RelatoriosRoute: typeof RelatoriosRoute
   CandidatoIdRoute: typeof CandidatoIdRoute
   CargoCargoRoute: typeof CargoCargoRoute
@@ -184,6 +197,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MetaXUrnaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/painel': {
+      id: '/painel'
+      path: '/painel'
+      fullPath: '/painel'
+      preLoaderRoute: typeof PainelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/relatorios': {
       id: '/relatorios'
       path: '/relatorios'
@@ -221,6 +241,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndicadoresRoute: IndicadoresRoute,
   MapaRoute: MapaRoute,
   MetaXUrnaRoute: MetaXUrnaRoute,
+  PainelRoute: PainelRoute,
   RelatoriosRoute: RelatoriosRoute,
   CandidatoIdRoute: CandidatoIdRoute,
   CargoCargoRoute: CargoCargoRoute,
