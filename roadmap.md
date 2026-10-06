@@ -1,6 +1,6 @@
 # Tasks
-- [ ] Organize the Bancadas report as complete summaries with candidate names below, preserving CSV.
-- [ ] Apply the same organization to Bancadas PDF and verify both offices and phone layout.
+- [x] Organize the Bancadas report as complete summaries with candidate names below, preserving CSV.
+- [x] Apply the same organization to Bancadas PDF and verify both offices and phone layout.
 - [x] Apply Data Analytics branding.
 - [x] Add polished PDF export for the filtered reports.
 - [x] Verify downloaded PDF pages visually and report export end-to-end.
