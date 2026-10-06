@@ -4,6 +4,7 @@ import { downloadCSV, nf, slugify } from "@/lib/eleicoes";
 import { Btn } from "@/components/ui-bits";
 import type { BlocoTabela, Celula, Coluna, ValorSit } from "@/lib/relatorios/blocos";
 import { ordenarLinhas, textoCelula, valorCSV } from "@/lib/relatorios/blocos";
+import { BancadasResumo } from "./BancadasResumo";
 
 const NUMERICO = new Set<Coluna["tipo"]>(["int", "pct", "pos", "dif", "corr"]);
 
@@ -123,12 +124,12 @@ export function TabelaRelatorio({ t }: { t: BlocoTabela }) {
         )}
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>
-            {nf(linhas.length)} linha{linhas.length === 1 ? "" : "s"}
+            {nf(linhas.length)} {t.apresentacao ? "agremiações" : linhas.length === 1 ? "linha" : "linhas"}
           </span>
           <Btn onClick={baixar}>CSV</Btn>
         </div>
       </div>
-      <div className="mb-3 flex items-center gap-2 sm:hidden">
+      <div className={`mb-3 flex items-center gap-2 ${t.apresentacao ? "" : "sm:hidden"}`}>
         <label htmlFor={`ordem-${t.arquivo}`} className="shrink-0 text-xs text-muted-foreground">Ordenar por</label>
         <select id={`ordem-${t.arquivo}`} value={ordem?.[0] ?? ""} onChange={(e) => ordenarPor(Number(e.target.value))} className="min-w-0 flex-1 rounded-md border border-input bg-background px-2 py-2 text-sm">
           <option value="" disabled>Ordem original</option>
@@ -136,6 +137,7 @@ export function TabelaRelatorio({ t }: { t: BlocoTabela }) {
         </select>
         {ordem && <Btn onClick={() => setOrdem([ordem[0], !ordem[1]])}>{ordem[1] ? "↓" : "↑"}</Btn>}
       </div>
+      {t.apresentacao ? <BancadasResumo t={t} linhas={visiveis} /> : <>
       <div className="grid gap-3 sm:hidden">
         {visiveis.map((r, k) => (
           <article key={k} className="min-w-0 rounded-md border border-border p-3">
@@ -191,6 +193,7 @@ export function TabelaRelatorio({ t }: { t: BlocoTabela }) {
           </tbody>
         </table>
       </div>
+      </>}
       {linhas.length > visiveis.length && (
         <div className="mt-3 text-center">
           <Btn onClick={() => setTodas(true)}>Mostrar todas ({nf(linhas.length)})</Btn>

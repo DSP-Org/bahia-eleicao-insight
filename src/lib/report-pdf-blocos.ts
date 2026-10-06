@@ -104,7 +104,7 @@ export async function baixarRelatorioPDF(r: Entrada) {
     return linhas.length ? linhas : [""];
   };
 
-  let page!: PDFPage; // criada por novaPagina() logo abaixo
+  let page: PDFPage = doc.addPage([W, H]);
   let y = 0;
   const novaPagina = () => {
     page = doc.addPage([W, H]);
@@ -125,6 +125,7 @@ export async function baixarRelatorioPDF(r: Entrada) {
     if (y - altura < RODAPE) novaPagina();
   };
 
+  doc.removePage(0);
   novaPagina();
   escrever(page, `RELATÓRIO · ${r.grupo.toUpperCase()}`, M, y - 6, 9, true, accent);
   y -= 38;
@@ -209,6 +210,10 @@ export async function baixarRelatorioPDF(r: Entrada) {
   }
 
   function desenharTabela(t: BlocoTabela) {
+    if (t.apresentacao) {
+      desenharBancadas(t);
+      return;
+    }
     const pesos = t.colunas.map((c, i) => (i === 0 && c.tipo === "texto" ? 1.9 : PESO[c.tipo]));
     const soma = pesos.reduce((a, b) => a + b, 0);
     const larg = pesos.map((p) => (U * p) / soma);
@@ -275,6 +280,55 @@ export async function baixarRelatorioPDF(r: Entrada) {
       y -= 24;
     }
     y -= 18;
+  }
+
+  function desenharBancadas(t: BlocoTabela) {
+    const rotulo = t.apresentacao?.projecao ? "Eleitos projetados" : "Eleitos";
+    let primeira = true;
+    for (const row of linhasIniciais(t)) {
+      const texto = (i: number) => {
+        const col = t.colunas[i];
+        return col ? textoCelula(row[i] ?? null, col) : "";
+      };
+      const titulo = quebrar(texto(0), U - 110, 11, bold);
+      const nomes = texto(9).split(",").map((n) => n.trim()).filter(Boolean);
+      const nominata = quebrar(nomes.join("  ·  "), U - 24, 9);
+      const partidos = quebrar(`${rotulo} por partido: ${texto(8)}`, U - 24, 8);
+      const altura = 84 + titulo.length * 14 + (nomes.length ? 22 + partidos.length * 11 + nominata.length * 13 : 20);
+      const mudou = y - altura - (primeira ? 24 : 0) < RODAPE;
+      garantir(altura + (primeira ? 24 : 0));
+      if (primeira || mudou) {
+        escrever(page, `${t.titulo}${primeira ? "" : " (continuação)"}`, M, y - 4, 11, true);
+        y -= 24;
+        primeira = false;
+      }
+      const topo = y;
+      escrever(page, texto(1).toUpperCase(), M + 12, y - 12, 7.5, true, accent);
+      titulo.forEach((l, i) => escrever(page, l, M + 12, y - 29 - i * 14, 11, true));
+      escrever(page, `${texto(2)} vagas`, W - M - 90, y - 28, 13, true, accent);
+      y -= 38 + titulo.length * 14;
+      const metricas = [6, 7, 3, 4, 5];
+      metricas.forEach((i, k) => {
+        const x = M + 12 + k * (U - 24) / 5;
+        escrever(page, t.colunas[i]?.titulo ?? "", x, y, 7.5, false, muted);
+        escrever(page, texto(i), x, y - 16, 11, true);
+      });
+      y -= 32;
+      page.drawLine({ start: { x: M + 12, y }, end: { x: W - M - 12, y }, color: line, thickness: 0.5 });
+      if (nomes.length) {
+        y -= 15;
+        partidos.forEach((l) => { escrever(page, l, M + 12, y, 8, true, accent); y -= 11; });
+        y -= 5;
+        nominata.forEach((l) => { escrever(page, l, M + 12, y, 9); y -= 13; });
+      } else {
+        y -= 16;
+        escrever(page, "Sem vagas conquistadas.", M + 12, y, 8, false, muted);
+      }
+      y -= 12;
+      page.drawRectangle({ x: M, y, width: U, height: topo - y, borderColor: line, borderWidth: 0.5 });
+      y -= 14;
+    }
+    y -= 4;
   }
 
   const paginas = doc.getPages();
