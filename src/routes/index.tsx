@@ -31,7 +31,7 @@ const PRODUTOS = [
     texto: "Quem venceu em cada um dos 417 municípios. Toque em qualquer cidade e veja os votos, os percentuais e o total de válidos.",
   },
   {
-    to: "/candidato/governador-jeremias-rodrigues" as const,
+    to: "/candidato/50002536314" as const,
     emoji: "🎯",
     titulo: "Raio-x de cada candidato",
     texto: "A força de um candidato no mapa, os melhores e piores municípios e onde os votos estão concentrados.",
