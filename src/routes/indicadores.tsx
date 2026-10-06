@@ -115,7 +115,7 @@ function Indicadores() {
         <span>Participação, votos e força territorial · Eleições 2026 - BA</span>
       </PageHead>
 
-      <div className={`mb-5 grid gap-4 border-b border-border pb-5 sm:grid-cols-2 ${mostraCandidato ? "lg:grid-cols-[180px_repeat(3,minmax(0,1fr))]" : "lg:grid-cols-[180px_repeat(2,minmax(0,1fr))]"}`}>
+      <div className={`mb-5 grid gap-4 border-b border-border pb-5 sm:grid-cols-2 ${["lg:grid-cols-[180px_minmax(0,1fr)]", "lg:grid-cols-[180px_repeat(2,minmax(0,1fr))]", "lg:grid-cols-[180px_repeat(3,minmax(0,1fr))]"][Number(mostraCandidato) + Number(mostraBusca)]}`}>
         <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted-foreground">Cargo
           <Select value={slug} onChange={(value) => { setSlug(value); setCandidatoId(""); }} className="min-h-11 w-full">
             {CARGOS.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}
@@ -129,14 +129,14 @@ function Indicadores() {
           <p className="text-xs font-semibold text-muted-foreground">Candidato do raio-x</p>
           <BuscaItem key={slug} itens={cargo.candidatos} busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)} render={(c) => <span>{c.nome} · {c.partido}{recorte !== "ba" && <span className="text-muted-foreground"> · {c.votos.toLocaleString("pt-BR")} votos</span>}</span>} onEscolher={(c) => setCandidatoId(c.id)} placeholder="Nome, partido ou número…" rotulo="Buscar candidato dos indicadores" selecionado={candidato ?? null} />
         </div>}
-        <label className={`grid min-w-0 gap-1.5 ${mostraCandidato ? "" : "sm:col-span-2 lg:col-span-1"}`}>
+        {mostraBusca && <label className={`grid min-w-0 gap-1.5 ${mostraCandidato ? "" : "sm:col-span-2 lg:col-span-1"}`}>
           <span className="text-xs font-semibold text-muted-foreground">Buscar indicador</span>
           <div className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-input bg-background px-3">
             <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Abstenção, nulos, liderança…" aria-label="Buscar indicador" className="min-w-0 w-full bg-transparent py-2 text-sm outline-none" />
             {busca && <button type="button" onClick={() => setBusca("")} className="shrink-0 text-xs text-muted-foreground underline" aria-label="Limpar busca">Limpar</button>}
           </div>
-        </label>
+        </label>}
       </div>
 
       {gruposUteis.length > 2 && <div className="mb-6 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap" role="group" aria-label="Categorias de indicadores">
