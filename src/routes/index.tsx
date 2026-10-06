@@ -105,7 +105,7 @@ function Vendas() {
               </p>
             </div>
             <div className="mx-auto w-full max-w-sm">
-              <img src={logoUrl} alt="Data5 Analytics" className="w-full rounded-md border border-border bg-background p-4" width={1280} height={640} loading="eager" />
+              <img src={logoUrl} alt="Data5 Analytics" className="w-full rounded-md border border-border bg-background p-4" width={971} height={324} loading="eager" />
             </div>
           </div>
 

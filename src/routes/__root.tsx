@@ -109,7 +109,7 @@ function RootComponent() {
         <header className="border-b border-border bg-card">
           <div className="mx-auto grid max-w-7xl gap-3 px-4 py-3 md:flex md:flex-wrap md:items-center md:justify-between">
             <Link to="/" className="grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
-              <img src={logoUrl} alt="Data5 Analytics" className="h-11 w-auto shrink-0" width={1280} height={640} />
+              <img src={logoUrl} alt="Data5 Analytics" className="h-11 w-auto shrink-0" width={971} height={324} />
               <span className="border-l border-border pl-3 font-sans text-xs font-medium uppercase tracking-wide text-muted-foreground">Eleições 2026 - BA</span>
             </Link>
             <nav aria-label="Navegação principal" className="grid grid-cols-3 gap-1 text-center text-sm sm:flex sm:flex-wrap">
