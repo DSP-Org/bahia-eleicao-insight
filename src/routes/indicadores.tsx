@@ -94,7 +94,10 @@ function Indicadores() {
   const candidato = cargo?.candidatos.find((c) => c.id === candidatoId) ?? (cargo ? [...cargo.candidatos].sort((a, b) => b.votos - a.votos)[0] : undefined);
   const tipoRecorte = (recorte === "ba" ? "ba" : recorte.split(":")[0]) as TipoRecorte;
   const secoes = useMemo(() => cargo ? criarIndicadores(cargo, munsRecorte, dados[cargo.slug] ?? {}, candidato?.id ?? "", tipoRecorte) : [], [cargo, munsRecorte, dados, candidato, tipoRecorte]);
-  const termo = slugify(busca.trim());
+  const totalCards = secoes.reduce((t, s) => t + s.cards.length, 0);
+  // Text search only helps when there are many cards to scan.
+  const mostraBusca = totalCards > 12;
+  const termo = mostraBusca ? slugify(busca.trim()) : "";
   const filtradas = secoes.map((s) => ({ ...s, cards: s.cards.filter((c) => slugify(`${c.label} ${c.value} ${c.detail}`).includes(termo)) })).filter((s) => s.cards.length);
   const contagem = (id: "todos" | GrupoIndicador) => filtradas.filter((s) => id === "todos" || s.id === id).reduce((t, s) => t + s.cards.length, 0);
   // Only categories that actually contain cards are offered; a filter that changes nothing is hidden.
@@ -102,8 +105,8 @@ function Indicadores() {
   const grupoAtivo = gruposUteis.some((g) => g.id === grupo) ? grupo : "todos";
   const visiveis = filtradas.filter((s) => grupoAtivo === "todos" || grupoAtivo === s.id);
   const quantidade = visiveis.reduce((total, secao) => total + secao.cards.length, 0);
-  // The candidate picker only affects the candidate section, so it appears only when that section is on screen.
-  const mostraCandidato = visiveis.some((s) => s.id === "candidato") || (grupoAtivo === "candidato");
+  // The candidate picker only affects the raio-x, so it appears only on the Candidato tab (Todos shows the leader).
+  const mostraCandidato = grupoAtivo === "candidato" && visiveis.some((s) => s.id === "candidato");
   if (!cargo) return <p>Nenhum resultado disponível.</p>;
 
   return (
@@ -112,7 +115,7 @@ function Indicadores() {
         <span>Participação, votos e força territorial · Eleições 2026 - BA</span>
       </PageHead>
 
-      <div className={`mb-5 grid gap-4 border-b border-border pb-5 sm:grid-cols-2 ${mostraCandidato ? "lg:grid-cols-[180px_repeat(3,minmax(0,1fr))]" : "lg:grid-cols-[180px_repeat(2,minmax(0,1fr))]"}`}>
+      <div className={`mb-5 grid gap-4 border-b border-border pb-5 sm:grid-cols-2 ${["lg:grid-cols-[180px_minmax(0,1fr)]", "lg:grid-cols-[180px_repeat(2,minmax(0,1fr))]", "lg:grid-cols-[180px_repeat(3,minmax(0,1fr))]"][Number(mostraCandidato) + Number(mostraBusca)]}`}>
         <label className="grid min-w-0 gap-1.5 text-xs font-semibold text-muted-foreground">Cargo
           <Select value={slug} onChange={(value) => { setSlug(value); setCandidatoId(""); }} className="min-h-11 w-full">
             {CARGOS.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}
@@ -126,14 +129,14 @@ function Indicadores() {
           <p className="text-xs font-semibold text-muted-foreground">Candidato do raio-x</p>
           <BuscaItem key={slug} itens={cargo.candidatos} busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)} render={(c) => <span>{c.nome} · {c.partido}{recorte !== "ba" && <span className="text-muted-foreground"> · {c.votos.toLocaleString("pt-BR")} votos</span>}</span>} onEscolher={(c) => setCandidatoId(c.id)} placeholder="Nome, partido ou número…" rotulo="Buscar candidato dos indicadores" selecionado={candidato ?? null} />
         </div>}
-        <label className={`grid min-w-0 gap-1.5 ${mostraCandidato ? "" : "sm:col-span-2 lg:col-span-1"}`}>
+        {mostraBusca && <label className={`grid min-w-0 gap-1.5 ${mostraCandidato ? "" : "sm:col-span-2 lg:col-span-1"}`}>
           <span className="text-xs font-semibold text-muted-foreground">Buscar indicador</span>
           <div className="grid min-h-11 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md border border-input bg-background px-3">
             <Search className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
             <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Abstenção, nulos, liderança…" aria-label="Buscar indicador" className="min-w-0 w-full bg-transparent py-2 text-sm outline-none" />
             {busca && <button type="button" onClick={() => setBusca("")} className="shrink-0 text-xs text-muted-foreground underline" aria-label="Limpar busca">Limpar</button>}
           </div>
-        </label>
+        </label>}
       </div>
 
       {gruposUteis.length > 2 && <div className="mb-6 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap" role="group" aria-label="Categorias de indicadores">
