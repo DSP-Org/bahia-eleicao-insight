@@ -6,4 +6,5 @@
 - [x] Verify mobile navigation, searches, reports and desktop tables.
 - [x] Add same-office and cross-office comparison tabs with improved candidate cards.
 - [x] Create a mobile-first Indicadores page with simple cards derived from election results.
-- [x] Verify indicator calculations, cargo/candidate filters and phone layouts.- [x] Widen the logo bar that holds the numeral 5 so the 5 fits, and refresh icons and the report logo.
+- [x] Verify indicator calculations, cargo/candidate filters and phone layouts.
+- [x] Widen the logo bar that holds the numeral 5 so the 5 fits, and refresh icons and the report logo.
