@@ -87,6 +87,12 @@ export function Blocos({
               </div>
             );
           case "tabela":
+            if (b.apresentacao) return (
+              <section key={k} aria-label={b.titulo}>
+                <h2 className="mb-3 font-display text-xl font-bold">{b.titulo}</h2>
+                <TabelaRelatorio t={b} />
+              </section>
+            );
             return (
               <Card key={k} title={b.titulo}>
                 <TabelaRelatorio t={b} />

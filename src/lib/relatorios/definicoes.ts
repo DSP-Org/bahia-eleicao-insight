@@ -978,6 +978,7 @@ add({
         tipo: "tabela",
         titulo: `${d.cargo.nome}: agremiações`,
         arquivo: arquivo("bancadas", d.slug),
+        apresentacao: { tipo: "bancadas", projecao: eleitos.some((c) => c.proj), totalVagas: d.cargo.vagas },
         ordem: [2, true],
         linhas: linhasAg,
         colunas: [

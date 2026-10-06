@@ -24,6 +24,7 @@ export type BlocoTabela = {
   arquivo: string;
   pagina?: number;
   busca?: boolean;
+  apresentacao?: { tipo: "bancadas"; projecao: boolean; totalVagas: number };
   legenda?: { cor: string; texto: string }[];
 };
 
