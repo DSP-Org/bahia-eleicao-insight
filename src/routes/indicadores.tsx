@@ -94,7 +94,10 @@ function Indicadores() {
   const candidato = cargo?.candidatos.find((c) => c.id === candidatoId) ?? (cargo ? [...cargo.candidatos].sort((a, b) => b.votos - a.votos)[0] : undefined);
   const tipoRecorte = (recorte === "ba" ? "ba" : recorte.split(":")[0]) as TipoRecorte;
   const secoes = useMemo(() => cargo ? criarIndicadores(cargo, munsRecorte, dados[cargo.slug] ?? {}, candidato?.id ?? "", tipoRecorte) : [], [cargo, munsRecorte, dados, candidato, tipoRecorte]);
-  const termo = slugify(busca.trim());
+  const totalCards = secoes.reduce((t, s) => t + s.cards.length, 0);
+  // Text search only helps when there are many cards to scan.
+  const mostraBusca = totalCards > 12;
+  const termo = mostraBusca ? slugify(busca.trim()) : "";
   const filtradas = secoes.map((s) => ({ ...s, cards: s.cards.filter((c) => slugify(`${c.label} ${c.value} ${c.detail}`).includes(termo)) })).filter((s) => s.cards.length);
   const contagem = (id: "todos" | GrupoIndicador) => filtradas.filter((s) => id === "todos" || s.id === id).reduce((t, s) => t + s.cards.length, 0);
   // Only categories that actually contain cards are offered; a filter that changes nothing is hidden.
@@ -102,8 +105,8 @@ function Indicadores() {
   const grupoAtivo = gruposUteis.some((g) => g.id === grupo) ? grupo : "todos";
   const visiveis = filtradas.filter((s) => grupoAtivo === "todos" || grupoAtivo === s.id);
   const quantidade = visiveis.reduce((total, secao) => total + secao.cards.length, 0);
-  // The candidate picker only affects the candidate section, so it appears only when that section is on screen.
-  const mostraCandidato = visiveis.some((s) => s.id === "candidato") || (grupoAtivo === "candidato");
+  // The candidate picker only affects the raio-x, so it appears only on the Candidato tab (Todos shows the leader).
+  const mostraCandidato = grupoAtivo === "candidato" && visiveis.some((s) => s.id === "candidato");
   if (!cargo) return <p>Nenhum resultado disponível.</p>;
 
   return (
