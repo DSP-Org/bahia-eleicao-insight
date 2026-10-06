@@ -31,7 +31,8 @@ const PRODUTOS = [
     texto: "Quem venceu em cada um dos 417 municípios. Toque em qualquer cidade e veja os votos, os percentuais e o total de válidos.",
   },
   {
-    to: "/candidato/50002536314" as const,
+    to: "/candidato/$id" as const,
+    candidatoId: "50002536314",
     emoji: "🎯",
     titulo: "Raio-x de cada candidato",
     texto: "A força de um candidato no mapa, os melhores e piores municípios e onde os votos estão concentrados.",
@@ -134,15 +135,20 @@ function Vendas() {
             com busca ao digitar e exportação em CSV e PDF.
           </p>
           <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {PRODUTOS.map((p, i) => (
-              <Link key={p.titulo} to={p.to}
-                className={`group flex min-w-0 flex-col rounded-md border border-border bg-card p-5 transition hover:border-primary ${i === PRODUTOS.length - 1 ? "sm:col-span-2 lg:col-span-1" : ""}`}>
-                <span className="text-2xl" aria-hidden>{p.emoji}</span>
-                <h3 className="font-display mt-3 break-words text-lg font-bold group-hover:text-primary">{p.titulo}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{p.texto}</p>
-                <span className="mt-3 font-mono text-xs uppercase tracking-wider text-primary">Abrir →</span>
-              </Link>
-            ))}
+            {PRODUTOS.map((p, i) => {
+              const cls = `group flex min-w-0 flex-col rounded-md border border-border bg-card p-5 transition hover:border-primary ${i === PRODUTOS.length - 1 ? "sm:col-span-2 lg:col-span-1" : ""}`;
+              const body = (
+                <>
+                  <span className="text-2xl" aria-hidden>{p.emoji}</span>
+                  <h3 className="font-display mt-3 break-words text-lg font-bold group-hover:text-primary">{p.titulo}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{p.texto}</p>
+                  <span className="mt-3 font-mono text-xs uppercase tracking-wider text-primary">Abrir →</span>
+                </>
+              );
+              return "candidatoId" in p
+                ? <Link key={p.titulo} to="/candidato/$id" params={{ id: p.candidatoId }} className={cls}>{body}</Link>
+                : <Link key={p.titulo} to={p.to} className={cls}>{body}</Link>;
+            })}
           </div>
         </div>
       </section>
