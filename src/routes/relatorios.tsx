@@ -64,7 +64,7 @@ export const Route = createFileRoute("/relatorios")({
       {
         name: "description",
         content:
-          "Data5 Analytics: 15 relatórios das Eleições 2026 na Bahia por município, território, região, partido e candidato, em PDF e CSV.",
+          "Data5 Analytics: 16 relatórios das Eleições 2026 na Bahia por município, território, região, partido e candidato, em PDF e CSV.",
       },
       { property: "og:title", content: "Relatórios — Data5 Analytics | Eleições 2026 - BA" },
       {
@@ -151,7 +151,7 @@ function Relatorios() {
   const trocar = (id: string) => {
     // ao mudar de relatório, mantém cargo, recorte, candidato e município
     const n: Estado = { r: id };
-    for (const k of ["cargo", "escopo", "cand", "mun"] as const) {
+    for (const k of ["cargo", "escopo", "cand", "mun", "muns"] as const) {
       const v = st[k];
       if (v) n[k] = v;
     }
