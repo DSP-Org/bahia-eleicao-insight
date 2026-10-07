@@ -44,6 +44,8 @@ export type Estado = {
   agr?: string;
   cargob?: string;
   min?: string;
+  cands?: string; // ids separados por vírgula
+  med?: string; // votos | pct
 };
 export type Controle =
   | "cargo"
@@ -60,7 +62,9 @@ export type Controle =
   | "muns"
   | "agr"
   | "cargob"
-  | "min";
+  | "min"
+  | "cands"
+  | "med";
 
 export type Relatorio = {
   id: string;
@@ -1011,6 +1015,75 @@ add({
 });
 
 // ---------- COMPARATIVO
+
+add({
+  id: "multi",
+  grupo: "COMPARATIVO",
+  titulo: "Painel de vários candidatos",
+  desc: "Coloca vários candidatos lado a lado, mesmo de cargos diferentes, nas cidades escolhidas — uma coluna por candidato, em votos ou percentual.",
+  controles: ["cands", "med", "muns"],
+  padrao: { med: "votos" },
+  gerar(B, st) {
+    const ids = (st.cands ?? "").split(",").filter((id) => B.candPorId.has(id));
+    if (!ids.length) {
+      const p = B.candPorId.get(candidatoPadrao(B));
+      if (p) {
+        ids.push(p.c.id);
+        const s = B.cargos[p.slug].cargo.candidatos.find((c) => c.id !== p.c.id);
+        if (s) ids.push(s.id);
+      }
+    }
+    const cs = ids.map((id) => B.candPorId.get(id)!).filter(Boolean);
+    if (!cs.length) return [{ tipo: "aviso", texto: "Adicione ao menos um candidato." }];
+    const emPct = st.med === "pct";
+    const set = st.muns ? recorteSet(`muns:${st.muns}`, B) : null;
+    const muns = munsDoRecorte(B, set);
+    const nomeRec = !st.muns ? "Bahia" : muns.length <= 3 ? muns.map((mi) => B.muns[mi]?.nome).join(", ") : `${muns.length} municípios`;
+    const mapas = cs.map((x) => mapaVotos(B.cargos[x.slug].votos[x.i] ?? []));
+    const rot = (x: (typeof cs)[number]) => (new Set(cs.map((y) => y.slug)).size > 1 ? `${x.c.nome} (${NOME_CURTO[x.slug]})` : x.c.nome);
+    const linhas: Celula[][] = muns.map((mi) => [
+      vMun(B, mi),
+      ...cs.map((x, k) => {
+        const v = mapas[k].get(mi) ?? 0;
+        return emPct ? razao(v, B.cargos[x.slug].stats[mi]?.[E.vv] ?? 0) : v;
+      }),
+    ]);
+    const totais = cs.map((x, k) => {
+      const v = muns.reduce((s, mi) => s + (mapas[k].get(mi) ?? 0), 0);
+      return { v, p: razao(v, statsRecorte(B.cargos[x.slug], set)[E.vv] ?? 0) };
+    });
+    return [
+      {
+        tipo: "numeros",
+        itens: cs.map((x, k) => ({
+          rotulo: rot(x),
+          valor: emPct ? fmtPct(totais[k].p, 2) : nf(totais[k].v),
+          sub: emPct ? `${nf(totais[k].v)} votos · ${nomeRec}` : `${fmtPct(totais[k].p, 2)} dos válidos · ${nomeRec}`,
+        })),
+      },
+      {
+        tipo: "tabela",
+        titulo: `${emPct ? "% dos válidos" : "Votos"} · ${nomeRec}`,
+        arquivo: arquivo("varios-candidatos", emPct ? "percentual" : "votos", nomeRec),
+        busca: muns.length > 12,
+        ordem: [1, true],
+        pagina: 40,
+        linhas,
+        colunas: [
+          col("Município", "mun"),
+          ...cs.map((x) => (emPct ? col(rot(x), "pct", { casas: 2 }) : col(rot(x), "int"))),
+        ],
+      },
+      {
+        tipo: "nota",
+        texto: emPct
+          ? "Percentual de cada candidato sobre os votos válidos do próprio cargo na cidade — comparável entre cargos diferentes."
+          : "Votos absolutos de cada candidato. Entre cargos diferentes, use o percentual para comparar o desempenho relativo.",
+      },
+    ];
+  },
+});
+
 
 add({
   id: "duelo",
