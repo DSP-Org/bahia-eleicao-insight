@@ -126,9 +126,10 @@ function Relatorios() {
       e.cand = candidatoPadrao(B);
     if (B && rel.controles.includes("cand2") && !B.candPorId.has(e.cand2 ?? "")) {
       const primeiro = B.candPorId.get(e.cand ?? "");
-      e.cand2 = primeiro
-        ? B.cargos[primeiro.slug].cargo.candidatos.find((c) => c.id !== primeiro.c.id)?.id
+      const segundo = primeiro
+        ? B.cargos[primeiro.slug].cargo.candidatos.find((c) => c.id !== primeiro.c.id)
         : undefined;
+      if (segundo) e.cand2 = segundo.id;
     }
     if (B && rel.controles.includes("mun") && !B.porTse.has(e.mun ?? ""))
       e.mun = municipioPadrao(B);
