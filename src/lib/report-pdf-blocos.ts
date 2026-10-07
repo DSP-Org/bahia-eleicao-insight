@@ -1,5 +1,5 @@
 // PDF dos relatórios da página /relatorios, no mesmo padrão visual de report-pdf.ts
-// (A4 paisagem, logo, fontes DejaVu, cores --report-*), montado a partir dos blocos do relatório.
+// (A4 adaptativo, logo, fontes DejaVu, cores --report-*), montado a partir dos blocos do relatório.
 import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import reportLogo from "@/assets/logo-relatorio.png.asset.json";
@@ -8,6 +8,7 @@ import type { Bloco, BlocoTabela, Coluna } from "@/lib/relatorios/blocos";
 import { linhasIniciais, textoCelula } from "@/lib/relatorios/blocos";
 
 type Entrada = { titulo: string; grupo: string; filtros: string; blocos: Bloco[] };
+type Orientacao = "retrato" | "paisagem";
 
 const PESO: Record<Coluna["tipo"], number> = {
   cand: 2.2,
@@ -21,6 +22,22 @@ const PESO: Record<Coluna["tipo"], number> = {
   corr: 0.9,
 };
 const NUMERICO = new Set<Coluna["tipo"]>(["int", "pct", "pos", "dif", "corr"]);
+const A4: Record<Orientacao, readonly [number, number]> = {
+  retrato: [595.28, 841.89],
+  paisagem: [841.89, 595.28],
+};
+
+// Estima a largura que a tabela precisa. Títulos longos pesam mais, sobretudo em
+// colunas numéricas, nas quais o título costuma ser mais largo que os valores.
+function orientacaoTabela(t: BlocoTabela): Orientacao {
+  if (t.apresentacao?.tipo === "bancadas") return "retrato";
+  const peso = t.colunas.reduce((soma, coluna, i) => {
+    const base = i === 0 && coluna.tipo === "texto" ? 1.9 : PESO[coluna.tipo];
+    const excessoTitulo = Math.max(0, coluna.titulo.length - (NUMERICO.has(coluna.tipo) ? 11 : 18));
+    return soma + base + Math.min(0.8, excessoTitulo * 0.035);
+  }, 0);
+  return peso <= 6.6 ? "retrato" : "paisagem";
+}
 
 export async function baixarRelatorioPDF(r: Entrada) {
   const doc = await PDFDocument.create();
@@ -57,11 +74,11 @@ export async function baixarRelatorioPDF(r: Entrada) {
   const light = cor("--report-surface"),
     line = cor("--report-line"),
     paper = cor("--report-paper");
-  const W = 841.89,
-    H = 595.28,
-    M = 36,
-    U = W - M * 2,
+  let orientacao: Orientacao = "retrato";
+  let [W, H] = A4[orientacao];
+  const M = 36,
     RODAPE = 56;
+  let U = W - M * 2;
   const emitido = new Date().toLocaleString("pt-BR");
 
   const escrever = (
@@ -106,7 +123,10 @@ export async function baixarRelatorioPDF(r: Entrada) {
 
   let page: PDFPage = doc.addPage([W, H]);
   let y = 0;
-  const novaPagina = () => {
+  const novaPagina = (proxima: Orientacao = orientacao) => {
+    orientacao = proxima;
+    [W, H] = A4[orientacao];
+    U = W - M * 2;
     page = doc.addPage([W, H]);
     page.drawRectangle({ x: 0, y: 0, width: W, height: H, color: paper });
     if (logo)
@@ -205,6 +225,8 @@ export async function baixarRelatorioPDF(r: Entrada) {
       );
       y -= alt + 10;
     } else if (b.tipo === "tabela") {
+      const proxima = orientacaoTabela(b);
+      if (proxima !== orientacao) novaPagina(proxima);
       desenharTabela(b);
     }
   }
@@ -333,9 +355,10 @@ export async function baixarRelatorioPDF(r: Entrada) {
 
   const paginas = doc.getPages();
   paginas.forEach((p, i) => {
-    p.drawLine({ start: { x: M, y: 42 }, end: { x: W - M, y: 42 }, color: line, thickness: 0.5 });
+    const larguraPagina = p.getWidth();
+    p.drawLine({ start: { x: M, y: 42 }, end: { x: larguraPagina - M, y: 42 }, color: line, thickness: 0.5 });
     escrever(p, `Data5 Analytics · TSE / IBGE · Emitido em ${emitido}`, M, 26, 7, false, muted);
-    escrever(p, `${i + 1} / ${paginas.length}`, W - M - 30, 26, 8, true, muted);
+    escrever(p, `${i + 1} / ${paginas.length}`, larguraPagina - M - 30, 26, 8, true, muted);
   });
   doc.setTitle(`Data5 Analytics — ${r.titulo}`);
   doc.setAuthor("Data5 Analytics");
