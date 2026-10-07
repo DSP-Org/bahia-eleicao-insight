@@ -46,6 +46,8 @@ const CHAVES = [
   "agr",
   "cargob",
   "min",
+  "cands",
+  "med",
 ] as const;
 
 export const Route = createFileRoute("/relatorios")({
@@ -625,6 +627,64 @@ function Controle({
               ))}
               <button type="button" onClick={() => salvar([])} className="px-2 py-1 text-xs text-primary underline">
                 Bahia toda
+              </button>
+            </div>
+          )}
+        </Campo>
+      );
+    }
+    case "med":
+      return (
+        <Campo rotulo="Mostrar nas colunas">
+          <Select value={st.med ?? "votos"} onChange={(v) => definir("med", v)}>
+            <option value="votos">Quantidade de votos</option>
+            <option value="pct">Percentual dos válidos</option>
+          </Select>
+        </Campo>
+      );
+    case "cands": {
+      const escolhidos = (st.cands ?? "").split(",").filter((id) => B.candPorId.has(id));
+      const salvar = (l: string[]) => definir("cands", l.join(","));
+      const lista = SLUGS.flatMap((s) =>
+        B.cargos[s].cargo.candidatos
+          .filter((x) => !escolhidos.includes(x.id))
+          .map((x) => ({ c: x, s, busca: `${x.nome} ${x.nomeCompleto} ${x.n} ${x.partido} ${NOME_CURTO[s]}` })),
+      );
+      return (
+        <Campo rotulo={escolhidos.length ? `Candidatos (${escolhidos.length})` : "Candidatos: adicione vários"} largo>
+          <BuscaItem
+            itens={lista}
+            rotulo="Adicionar candidato"
+            placeholder="Nome, número ou partido (qualquer cargo)"
+            busca={(x) => slugBusca(x.busca)}
+            onEscolher={(x) => salvar([...escolhidos, x.c.id])}
+            render={(x) => (
+              <>
+                <b>{x.c.nome}</b>{" "}
+                <span className="text-muted-foreground">
+                  · {NOME_CURTO[x.s]} · {x.c.partido} {x.c.n} · {nf(x.c.votos)} votos
+                </span>
+              </>
+            )}
+          />
+          {escolhidos.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {escolhidos.map((id) => {
+                const x = B.candPorId.get(id)!;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => salvar(escolhidos.filter((y) => y !== id))}
+                    className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold hover:bg-card"
+                    aria-label={`Remover ${x.c.nome}`}
+                  >
+                    {x.c.nome} · {NOME_CURTO[x.slug]} ×
+                  </button>
+                );
+              })}
+              <button type="button" onClick={() => salvar([])} className="px-2 py-1 text-xs text-primary underline">
+                Limpar
               </button>
             </div>
           )}
