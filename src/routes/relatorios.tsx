@@ -558,7 +558,7 @@ function Controle({
           <BuscaItem
             itens={B.muns.map((m, i) => ({ m, i })).filter((x) => !escolhidos.includes(x.m.tse))}
             rotulo="Adicionar município"
-            placeholder="Digite para adicionar uma cidade (vazio = Bahia toda)"
+            placeholder="Digite uma cidade para adicionar"
             busca={(x) => B.buscaMun[x.i] ?? ""}
             onEscolher={(x) => salvar([...escolhidos, x.m.tse])}
             render={(x) => (
