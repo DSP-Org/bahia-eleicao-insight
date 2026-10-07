@@ -38,6 +38,7 @@ export type Estado = {
   pn?: string;
   sit?: string;
   cand?: string;
+  cand2?: string;
   mun?: string;
   muns?: string; // códigos TSE separados por vírgula; vazio = Bahia toda
   agr?: string;
@@ -54,6 +55,7 @@ export type Controle =
   | "pn"
   | "sit"
   | "cand"
+  | "cand2"
   | "mun"
   | "muns"
   | "agr"
@@ -1004,6 +1006,238 @@ add({
           col("Situação", "sit"),
         ],
       },
+    ];
+  },
+});
+
+// ---------- COMPARATIVO
+
+add({
+  id: "duelo",
+  grupo: "COMPARATIVO",
+  titulo: "Duelo territorial de candidatos",
+  desc: "Compara dois candidatos, inclusive de cargos diferentes, cidade a cidade e pelo percentual dentro de cada cargo.",
+  controles: ["cand", "cand2", "escopo"],
+  padrao: { escopo: "ba" },
+  gerar(B, st) {
+    const a = B.candPorId.get(st.cand ?? "") ?? B.candPorId.get(candidatoPadrao(B));
+    const b = B.candPorId.get(st.cand2 ?? "");
+    if (!a || !b || a.c.id === b.c.id)
+      return [{ tipo: "aviso", texto: "Escolha dois candidatos diferentes para comparar." }];
+    const set = recorteSet(st.escopo, B);
+    const muns = munsDoRecorte(B, set);
+    const mapaA = mapaVotos(B.cargos[a.slug].votos[a.i] ?? []);
+    const mapaB = mapaVotos(B.cargos[b.slug].votos[b.i] ?? []);
+    let vA = 0;
+    let vB = 0;
+    let venceA = 0;
+    let venceB = 0;
+    let empates = 0;
+    const linhas: Celula[][] = muns.map((mi) => {
+      const va = mapaA.get(mi) ?? 0;
+      const vb = mapaB.get(mi) ?? 0;
+      const pa = razao(va, B.cargos[a.slug].stats[mi]?.[E.vv] ?? 0);
+      const pb = razao(vb, B.cargos[b.slug].stats[mi]?.[E.vv] ?? 0);
+      vA += va;
+      vB += vb;
+      if (pa > pb) venceA++;
+      else if (pb > pa) venceB++;
+      else empates++;
+      return [
+        vMun(B, mi),
+        B.muns[mi]?.ti ?? "",
+        va,
+        pa,
+        vb,
+        pb,
+        pa - pb,
+        pa === pb ? "Empate" : pa > pb ? a.c.nome : b.c.nome,
+      ];
+    });
+    const sA = statsRecorte(B.cargos[a.slug], set);
+    const sB = statsRecorte(B.cargos[b.slug], set);
+    const pA = razao(vA, sA[E.vv] ?? 0);
+    const pB = razao(vB, sB[E.vv] ?? 0);
+    return [
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: a.c.nome, valor: nf(vA), sub: `${fmtPct(pA, 2)} · ${NOME_CURTO[a.slug]}` },
+          { rotulo: b.c.nome, valor: nf(vB), sub: `${fmtPct(pB, 2)} · ${NOME_CURTO[b.slug]}` },
+          { rotulo: `${a.c.nome} supera`, valor: `${nf(venceA)} cidades`, sub: "pelo percentual no cargo" },
+          { rotulo: `${b.c.nome} supera`, valor: `${nf(venceB)} cidades`, sub: empates ? `${nf(empates)} empates` : "sem empates" },
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `${a.c.nome} × ${b.c.nome} · ${recorteNome(st.escopo, B)}`,
+        arquivo: arquivo("duelo", a.c.nome, b.c.nome, recorteNome(st.escopo, B)),
+        busca: true,
+        ordem: [6, true],
+        pagina: 40,
+        linhas,
+        colunas: [
+          col("Município", "mun"),
+          col("Território", "texto"),
+          col(`Votos · ${a.c.nome}`, "int"),
+          col(`% · ${a.c.nome}`, "pct", { casas: 2 }),
+          col(`Votos · ${b.c.nome}`, "int"),
+          col(`% · ${b.c.nome}`, "pct", { casas: 2 }),
+          col("Diferença percentual", "pct", { casas: 2, barra: true }),
+          col("Maior força relativa", "texto"),
+        ],
+      },
+      {
+        tipo: "nota",
+        texto:
+          a.slug === b.slug
+            ? "A diferença compara a participação dos dois candidatos nos votos válidos do mesmo cargo em cada município."
+            : "Como os cargos têm quantidades diferentes de votos válidos, a liderança territorial usa o percentual dentro de cada cargo; os votos absolutos aparecem separados.",
+      },
+    ];
+  },
+});
+
+add({
+  id: "cargos-lado-a-lado",
+  grupo: "COMPARATIVO",
+  titulo: "Cargos lado a lado",
+  desc: "Compara participação, votos válidos, brancos e nulos de dois cargos em cada município.",
+  controles: ["cargo", "cargob", "escopo"],
+  padrao: { cargo: "governador", cargob: "presidente", escopo: "ba" },
+  gerar(B, st) {
+    const slugA = slugDe(st, "governador");
+    const slugB = ehSlug(st.cargob) ? st.cargob : "presidente";
+    if (slugA === slugB)
+      return [{ tipo: "aviso", texto: "Escolha dois cargos diferentes para comparar." }];
+    const a = B.cargos[slugA];
+    const b = B.cargos[slugB];
+    const set = recorteSet(st.escopo, B);
+    const sA = statsRecorte(a, set);
+    const sB = statsRecorte(b, set);
+    const linhas = munsDoRecorte(B, set).map((mi): Celula[] => {
+      const sa = a.stats[mi] ?? [];
+      const sb = b.stats[mi] ?? [];
+      const qa = razao(sa[E.vv] ?? 0, sa[E.tv] ?? 0);
+      const qb = razao(sb[E.vv] ?? 0, sb[E.tv] ?? 0);
+      return [
+        vMun(B, mi),
+        B.muns[mi]?.ti ?? "",
+        sa[E.vv] ?? 0,
+        qa,
+        razao(sa[E.vb] ?? 0, sa[E.tv] ?? 0),
+        razao(sa[E.vn] ?? 0, sa[E.tv] ?? 0),
+        sb[E.vv] ?? 0,
+        qb,
+        razao(sb[E.vb] ?? 0, sb[E.tv] ?? 0),
+        razao(sb[E.vn] ?? 0, sb[E.tv] ?? 0),
+        qa - qb,
+      ];
+    });
+    return [
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: `Válidos · ${NOME_CURTO[slugA]}`, valor: nf(sA[E.vv] ?? 0), sub: fmtPct(razao(sA[E.vv] ?? 0, sA[E.tv] ?? 0), 1) },
+          { rotulo: `Válidos · ${NOME_CURTO[slugB]}`, valor: nf(sB[E.vv] ?? 0), sub: fmtPct(razao(sB[E.vv] ?? 0, sB[E.tv] ?? 0), 1) },
+          { rotulo: `Brancos + nulos · ${NOME_CURTO[slugA]}`, valor: fmtPct(razao((sA[E.vb] ?? 0) + (sA[E.vn] ?? 0), sA[E.tv] ?? 0), 1) },
+          { rotulo: `Brancos + nulos · ${NOME_CURTO[slugB]}`, valor: fmtPct(razao((sB[E.vb] ?? 0) + (sB[E.vn] ?? 0), sB[E.tv] ?? 0), 1) },
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `${a.cargo.nome} × ${b.cargo.nome} · ${recorteNome(st.escopo, B)}`,
+        arquivo: arquivo("cargos", slugA, slugB, recorteNome(st.escopo, B)),
+        busca: true,
+        ordem: [10, true],
+        pagina: 35,
+        linhas,
+        colunas: [
+          col("Município", "mun"), col("Território", "texto"),
+          col(`Válidos · ${NOME_CURTO[slugA]}`, "int"), col(`% válidos · ${NOME_CURTO[slugA]}`, "pct", { casas: 1 }),
+          col(`% brancos · ${NOME_CURTO[slugA]}`, "pct", { casas: 1 }), col(`% nulos · ${NOME_CURTO[slugA]}`, "pct", { casas: 1 }),
+          col(`Válidos · ${NOME_CURTO[slugB]}`, "int"), col(`% válidos · ${NOME_CURTO[slugB]}`, "pct", { casas: 1 }),
+          col(`% brancos · ${NOME_CURTO[slugB]}`, "pct", { casas: 1 }), col(`% nulos · ${NOME_CURTO[slugB]}`, "pct", { casas: 1 }),
+          col("Diferença em válidos", "pct", { casas: 1, barra: true }),
+        ],
+      },
+      { tipo: "nota", texto: "No cargo de Senador, cada eleitor pôde votar duas vezes; por isso, compare percentuais e não apenas totais absolutos." },
+    ];
+  },
+});
+
+add({
+  id: "partido-casas",
+  grupo: "COMPARATIVO",
+  titulo: "Partido: Estadual × Federal",
+  desc: "Mostra onde um partido rende mais para Deputado Estadual ou Federal e revela desequilíbrios territoriais.",
+  controles: ["pn", "escopo"],
+  padrao: { cargo: "deputado-estadual", escopo: "ba" },
+  gerar(B, st) {
+    const estadual = B.cargos["deputado-estadual"];
+    const federal = B.cargos["deputado-federal"];
+    const opcoes = opcoesPartido(B, "deputado-estadual");
+    const alvo = opcoes.find((p) => p.n === st.pn) ?? opcoes[0];
+    if (!alvo) return [{ tipo: "aviso", texto: "Sem partidos para comparar." }];
+    const votosPartido = (d: DadosCargo) => {
+      const out = new Map<number, number>();
+      d.cargo.candidatos.forEach((c, ci) => {
+        if (c.partido !== alvo.sg) return;
+        const f = d.votos[ci] ?? [];
+        for (let k = 0; k < f.length; k += 2)
+          out.set(f[k] as number, (out.get(f[k] as number) ?? 0) + (f[k + 1] as number));
+      });
+      const leg = d.legenda.get(alvo.n) ?? [];
+      for (let k = 0; k < leg.length; k += 2)
+        out.set(leg[k] as number, (out.get(leg[k] as number) ?? 0) + (leg[k + 1] as number));
+      return out;
+    };
+    const ve = votosPartido(estadual);
+    const vf = votosPartido(federal);
+    const set = recorteSet(st.escopo, B);
+    let totalE = 0;
+    let totalF = 0;
+    let melhorE = 0;
+    let melhorF = 0;
+    const linhas = munsDoRecorte(B, set).map((mi): Celula[] => {
+      const e = ve.get(mi) ?? 0;
+      const f = vf.get(mi) ?? 0;
+      const pe = razao(e, estadual.stats[mi]?.[E.vv] ?? 0);
+      const pfed = razao(f, federal.stats[mi]?.[E.vv] ?? 0);
+      totalE += e;
+      totalF += f;
+      if (pe > pfed) melhorE++;
+      else if (pfed > pe) melhorF++;
+      return [vMun(B, mi), B.muns[mi]?.ti ?? "", e, pe, f, pfed, pe - pfed, pe === pfed ? "Equilíbrio" : pe > pfed ? "Estadual" : "Federal"];
+    });
+    const validosE = statsRecorte(estadual, set)[E.vv] ?? 0;
+    const validosF = statsRecorte(federal, set)[E.vv] ?? 0;
+    return [
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: `${alvo.sg} · Estadual`, valor: nf(totalE), sub: fmtPct(razao(totalE, validosE), 2) },
+          { rotulo: `${alvo.sg} · Federal`, valor: nf(totalF), sub: fmtPct(razao(totalF, validosF), 2) },
+          { rotulo: "Mais forte no Estadual", valor: `${nf(melhorE)} cidades`, sub: "pela participação nos válidos" },
+          { rotulo: "Mais forte no Federal", valor: `${nf(melhorF)} cidades`, sub: "pela participação nos válidos" },
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `${alvo.sg} · Estadual × Federal · ${recorteNome(st.escopo, B)}`,
+        arquivo: arquivo("partido-estadual-federal", alvo.sg, recorteNome(st.escopo, B)),
+        busca: true,
+        ordem: [6, true],
+        pagina: 40,
+        linhas,
+        colunas: [
+          col("Município", "mun"), col("Território", "texto"),
+          col("Votos · Estadual", "int"), col("% · Estadual", "pct", { casas: 2 }),
+          col("Votos · Federal", "int"), col("% · Federal", "pct", { casas: 2 }),
+          col("Diferença percentual", "pct", { casas: 2, barra: true }), col("Força maior", "texto"),
+        ],
+      },
+      { tipo: "nota", texto: "A comparação soma votos nominais dos candidatos e votos de legenda do partido em cada cargo." },
     ];
   },
 });

@@ -1,4 +1,6 @@
 # Tasks
+- [x] Create a Comparativo report group with useful candidate, territory, and office comparison models.
+- [x] Verify the new comparison reports on desktop, mobile, CSV, and PDF.
 - [x] Organize the Bancadas report as complete summaries with candidate names below, preserving CSV.
 - [x] Apply the same organization to Bancadas PDF and verify both offices and phone layout.
 - [x] Apply Data Analytics branding.
