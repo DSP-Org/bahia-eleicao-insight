@@ -47,6 +47,7 @@ function Comparar() {
     { cargoSlug: "senador", candidatoId: "" },
   ]);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [cidades, setCidades] = useState<string[]>([]);
   const { data: meta } = useMeta();
   const { data: muns } = useMunicipios();
   const presidente = useMunData("presidente");
@@ -194,6 +195,8 @@ function Comparar() {
             {cands.map((c, k) => <CandidateCard key={c.id} candidato={c} cargo={cargo} cor={SERIES[k]} posicao={idxs[k] + 1} destaqueLabel="Vence em" destaqueValor={`${nf(wins[k])} municípios`} />)}
           </div>
 
+          <FatiaCidades muns={muns ?? []} linhas={linhasMesmo} cands={cands} cidades={cidades} setCidades={setCidades} />
+
           <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_400px]">
             <Card title="Quem venceu cada município" action={<span className="text-xs text-muted-foreground">Entre os escolhidos</span>}>
               <MapaBA
@@ -254,6 +257,70 @@ function Comparar() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+type Mun = { nome: string; tse: string; ibge: string };
+type LinhaMesmo = { m: Mun; votos: number[]; validos: number; vencedor: number };
+
+function FatiaCidades({ muns, linhas, cands, cidades, setCidades }: { muns: Mun[]; linhas: LinhaMesmo[]; cands: Candidato[]; cidades: string[]; setCidades: (c: string[]) => void }) {
+  const escolhidas = cidades.map((t) => linhas.find((r) => r.m.tse === t)).filter((r): r is LinhaMesmo => !!r);
+  const disponiveis = muns.filter((m) => !cidades.includes(m.tse));
+  const totVotos = cands.map((_, k) => escolhidas.reduce((s, r) => s + r.votos[k], 0));
+  const totValidos = escolhidas.reduce((s, r) => s + r.validos, 0);
+  const lider = totVotos.reduce((b, v, k) => (v > totVotos[b] ? k : b), 0);
+  return (
+    <div className="mb-5">
+      <Card title="Fatia por cidade" action={escolhidas.length > 0 && <Btn onClick={() => setCidades([])}>Limpar cidades</Btn>}>
+        <BuscaItem
+          itens={disponiveis}
+          busca={(m) => slugify(m.nome)}
+          placeholder="Digite o nome de uma cidade para adicionar…"
+          rotulo="Adicionar cidade"
+          render={(m) => <span>{m.nome}</span>}
+          selecionado={null}
+          onEscolher={(m) => setCidades([...cidades, m.tse])}
+        />
+        {escolhidas.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {escolhidas.map((r) => (
+              <button key={r.m.tse} type="button" onClick={() => setCidades(cidades.filter((t) => t !== r.m.tse))} className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold hover:bg-card" aria-label={`Remover ${r.m.nome}`}>
+                {r.m.nome} ×
+              </button>
+            ))}
+          </div>
+        )}
+        {!escolhidas.length ? (
+          <p className="mt-3 text-sm text-muted-foreground">Escolha uma ou mais cidades para ver a divisão dos votos entre os candidatos.</p>
+        ) : (
+          <div className="mt-4 grid gap-3">
+            {[...(escolhidas.length > 1 ? [{ titulo: `Soma de ${escolhidas.length} cidades`, votos: totVotos, validos: totValidos, venc: lider, soma: true }] : []), ...escolhidas.map((r) => ({ titulo: r.m.nome, votos: r.votos, validos: r.validos, venc: r.vencedor, soma: false }))].map((f) => {
+              const total = f.votos.reduce((s, v) => s + v, 0);
+              return (
+                <div key={f.titulo} className={`rounded-md border border-border p-3 ${f.soma ? "bg-muted" : "bg-card"}`}>
+                  <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                    <p className="font-display font-bold">{f.titulo}</p>
+                    <p className="font-mono text-xs text-muted-foreground">Válidos: {nf(f.validos)}</p>
+                  </div>
+                  <div className="mb-2 flex h-3 overflow-hidden rounded-sm bg-muted">
+                    {f.votos.map((v, k) => <div key={k} style={{ width: `${total ? (v / total) * 100 : 0}%`, background: SERIES[k] }} />)}
+                  </div>
+                  <ul className="grid gap-1 text-sm sm:grid-cols-2">
+                    {cands.map((c, k) => (
+                      <li key={c.id} className="flex min-w-0 items-center gap-2">
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ background: SERIES[k] }} />
+                        <span className={`min-w-0 flex-1 truncate ${f.venc === k && f.votos[k] > 0 ? "font-semibold" : ""}`}>{c.nome}</span>
+                        <span className="font-mono text-xs">{nf(f.votos[k])} · {pf(pct(f.votos[k], f.validos))}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }
