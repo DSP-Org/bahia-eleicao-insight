@@ -12,3 +12,4 @@
 - [x] Create a mobile-first Indicadores page with simple cards derived from election results.
 - [x] Verify indicator calculations, cargo/candidate filters and phone layouts.
 - [x] Widen the logo bar that holds the numeral 5 so the 5 fits, and refresh icons and the report logo.
+- [x] Make report PDFs choose portrait or landscape according to content width and visually verify representative exports.
