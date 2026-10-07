@@ -67,7 +67,7 @@ export const Route = createFileRoute("/relatorios")({
       {
         name: "description",
         content:
-          "Data5 Analytics: 19 relatórios das Eleições 2026 na Bahia por município, território, região, partido e candidato, em PDF e CSV.",
+          "Data5 Analytics: 20 relatórios das Eleições 2026 na Bahia por município, território, região, partido e candidato, em PDF e CSV.",
       },
       { property: "og:title", content: "Relatórios — Data5 Analytics | Eleições 2026 - BA" },
       {
