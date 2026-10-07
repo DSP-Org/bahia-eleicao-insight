@@ -40,6 +40,7 @@ const CHAVES = [
   "pn",
   "sit",
   "cand",
+  "cand2",
   "mun",
   "muns",
   "agr",
@@ -123,6 +124,12 @@ function Relatorios() {
       e.cargo = "deputado-estadual";
     if (B && rel.controles.includes("cand") && !B.candPorId.has(e.cand ?? ""))
       e.cand = candidatoPadrao(B);
+    if (B && rel.controles.includes("cand2") && !B.candPorId.has(e.cand2 ?? "")) {
+      const primeiro = B.candPorId.get(e.cand ?? "");
+      e.cand2 = primeiro
+        ? B.cargos[primeiro.slug].cargo.candidatos.find((c) => c.id !== primeiro.c.id)?.id
+        : undefined;
+    }
     if (B && rel.controles.includes("mun") && !B.porTse.has(e.mun ?? ""))
       e.mun = municipioPadrao(B);
     return e;
@@ -151,7 +158,7 @@ function Relatorios() {
   const trocar = (id: string) => {
     // ao mudar de relatório, mantém cargo, recorte, candidato e município
     const n: Estado = { r: id };
-    for (const k of ["cargo", "escopo", "cand", "mun", "muns"] as const) {
+    for (const k of ["cargo", "escopo", "cand", "cand2", "mun", "muns"] as const) {
       const v = st[k];
       if (v) n[k] = v;
     }
@@ -167,6 +174,7 @@ function Relatorios() {
         : "",
       rel.controles.includes("escopo") ? recorteNome(ef.escopo, B) : "",
       rel.controles.includes("cand") ? (B.candPorId.get(ef.cand ?? "")?.c.nome ?? "") : "",
+      rel.controles.includes("cand2") ? (B.candPorId.get(ef.cand2 ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("mun") ? (B.muns[B.porTse.get(ef.mun ?? "") ?? -1]?.nome ?? "") : "",
       rel.controles.includes("muns")
         ? (() => {
@@ -519,6 +527,40 @@ function Controle({
             placeholder="Nome ou número (ex.: tito, jeronimo, 13789)"
             busca={(x) => slugBusca(x.busca)}
             onEscolher={(x) => definir("cand", x.c.id)}
+            render={(x) => (
+              <>
+                <b>{x.c.nome}</b>{" "}
+                <span className="text-muted-foreground">
+                  · {NOME_CURTO[x.s]} · {x.c.partido} {x.c.n} · {nf(x.c.votos)} votos
+                </span>
+              </>
+            )}
+          />
+        </Campo>
+      );
+    }
+    case "cand2": {
+      const atual = B.candPorId.get(st.cand2 ?? "");
+      const lista = SLUGS.flatMap((s) =>
+        B.cargos[s].cargo.candidatos
+          .filter((x) => x.id !== st.cand)
+          .map((x) => ({
+            c: x,
+            s,
+            busca: `${x.nome} ${x.nomeCompleto} ${x.n} ${x.partido}`,
+          })),
+      );
+      return (
+        <Campo
+          rotulo={`Comparar com${atual ? `: ${atual.c.nome} (${NOME_CURTO[atual.slug]})` : ""}`}
+          largo
+        >
+          <BuscaItem
+            itens={lista}
+            rotulo="Buscar segundo candidato"
+            placeholder="Nome ou número do segundo candidato"
+            busca={(x) => slugBusca(x.busca)}
+            onEscolher={(x) => definir("cand2", x.c.id)}
             render={(x) => (
               <>
                 <b>{x.c.nome}</b>{" "}

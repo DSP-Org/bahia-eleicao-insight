@@ -38,6 +38,7 @@ export type Estado = {
   pn?: string;
   sit?: string;
   cand?: string;
+  cand2?: string;
   mun?: string;
   muns?: string; // códigos TSE separados por vírgula; vazio = Bahia toda
   agr?: string;
@@ -54,6 +55,7 @@ export type Controle =
   | "pn"
   | "sit"
   | "cand"
+  | "cand2"
   | "mun"
   | "muns"
   | "agr"
