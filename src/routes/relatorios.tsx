@@ -41,6 +41,7 @@ const CHAVES = [
   "sit",
   "cand",
   "mun",
+  "muns",
   "agr",
   "cargob",
   "min",
@@ -63,7 +64,7 @@ export const Route = createFileRoute("/relatorios")({
       {
         name: "description",
         content:
-          "Data5 Analytics: 15 relatórios das Eleições 2026 na Bahia por município, território, região, partido e candidato, em PDF e CSV.",
+          "Data5 Analytics: 16 relatórios das Eleições 2026 na Bahia por município, território, região, partido e candidato, em PDF e CSV.",
       },
       { property: "og:title", content: "Relatórios — Data5 Analytics | Eleições 2026 - BA" },
       {
@@ -150,7 +151,7 @@ function Relatorios() {
   const trocar = (id: string) => {
     // ao mudar de relatório, mantém cargo, recorte, candidato e município
     const n: Estado = { r: id };
-    for (const k of ["cargo", "escopo", "cand", "mun"] as const) {
+    for (const k of ["cargo", "escopo", "cand", "mun", "muns"] as const) {
       const v = st[k];
       if (v) n[k] = v;
     }
@@ -167,6 +168,12 @@ function Relatorios() {
       rel.controles.includes("escopo") ? recorteNome(ef.escopo, B) : "",
       rel.controles.includes("cand") ? (B.candPorId.get(ef.cand ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("mun") ? (B.muns[B.porTse.get(ef.mun ?? "") ?? -1]?.nome ?? "") : "",
+      rel.controles.includes("muns")
+        ? (() => {
+            const n = (ef.muns ?? "").split(",").map((t) => B.muns[B.porTse.get(t) ?? -1]?.nome).filter(Boolean);
+            return !n.length ? "Bahia" : n.length <= 3 ? n.join(", ") : `${n.length} municípios`;
+          })()
+        : "",
     ]
       .filter(Boolean)
       .join(" · ") || "Bahia";
@@ -540,6 +547,44 @@ function Controle({
               </>
             )}
           />
+        </Campo>
+      );
+    }
+    case "muns": {
+      const escolhidos = (st.muns ?? "").split(",").filter((t) => B.porTse.has(t));
+      const salvar = (l: string[]) => definir("muns", l.join(","));
+      return (
+        <Campo rotulo={escolhidos.length ? `Municípios (${escolhidos.length})` : "Municípios: Bahia toda"} largo>
+          <BuscaItem
+            itens={B.muns.map((m, i) => ({ m, i })).filter((x) => !escolhidos.includes(x.m.tse))}
+            rotulo="Adicionar município"
+            placeholder="Digite uma cidade para adicionar"
+            busca={(x) => B.buscaMun[x.i] ?? ""}
+            onEscolher={(x) => salvar([...escolhidos, x.m.tse])}
+            render={(x) => (
+              <>
+                <b>{x.m.nome}</b> <span className="text-muted-foreground">· {x.m.ti}</span>
+              </>
+            )}
+          />
+          {escolhidos.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {escolhidos.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => salvar(escolhidos.filter((x) => x !== t))}
+                  className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold hover:bg-card"
+                  aria-label={`Remover ${B.muns[B.porTse.get(t) ?? -1]?.nome}`}
+                >
+                  {B.muns[B.porTse.get(t) ?? -1]?.nome} ×
+                </button>
+              ))}
+              <button type="button" onClick={() => salvar([])} className="px-2 py-1 text-xs text-primary underline">
+                Bahia toda
+              </button>
+            </div>
+          )}
         </Campo>
       );
     }

@@ -39,6 +39,7 @@ export type Estado = {
   sit?: string;
   cand?: string;
   mun?: string;
+  muns?: string; // códigos TSE separados por vírgula; vazio = Bahia toda
   agr?: string;
   cargob?: string;
   min?: string;
@@ -54,6 +55,7 @@ export type Controle =
   | "sit"
   | "cand"
   | "mun"
+  | "muns"
   | "agr"
   | "cargob"
   | "min";
@@ -682,6 +684,122 @@ add({
         ],
       },
     );
+    return blocos;
+  },
+});
+
+add({
+  id: "dossie2",
+  grupo: "Candidatos",
+  titulo: "Dossiê 2 — candidato por município",
+  desc: "Desempenho de um candidato só nas cidades escolhidas (uma ou várias) ou na Bahia toda.",
+  controles: ["cand", "muns"],
+  padrao: {},
+  gerar(B, st) {
+    const ref = B.candPorId.get(st.cand ?? "") ?? B.candPorId.get(candidatoPadrao(B));
+    if (!ref) return [{ tipo: "aviso", texto: "Escolha um candidato." }];
+    const { c, i, slug } = ref;
+    const d = B.cargos[slug];
+    const set = st.muns ? recorteSet(`muns:${st.muns}`, B) : null;
+    const lista = munsDoRecorte(B, set && set.size ? set : null);
+    const setUsado = set && set.size ? set : null;
+    const nomeRecorte = setUsado
+      ? lista.length <= 3
+        ? lista.map((mi) => B.muns[mi]?.nome).join(", ")
+        : `${lista.length} municípios`
+      : "Bahia";
+    const s = statsRecorte(d, setUsado);
+    const { linhas: rk0, validos } = rankingRecorte(B, d, setUsado);
+    const rk = [...rk0].sort((a, b) => b.v - a.v);
+    const pos = rk.findIndex((x) => x.ref.i === i) + 1;
+    const meu = rk[pos - 1];
+    const v = meu?.v ?? 0;
+    const flat = d.votos[i] ?? [];
+    const porMun = new Map<number, number>();
+    for (let k = 0; k < flat.length; k += 2) porMun.set(flat[k] as number, flat[k + 1] as number);
+    const cidades = lista.map((mi) => {
+      const vm = porMun.get(mi) ?? 0;
+      const st2 = d.stats[mi] ?? [];
+      const top = rankPorMunicipio(d).get(mi)?.[0];
+      const lider = top ? d.cargo.candidatos[top[1]] : undefined;
+      return { mi, vm, vv: st2[E.vv] ?? 0, el: st2[E.el] ?? 0, r: vm ? posicaoNoMunicipio(d, i, mi) : null, lider, liderV: top?.[0] ?? 0 };
+    });
+    const primeiro = cidades.filter((x) => x.r === 1).length;
+    const comVoto = cidades.filter((x) => x.vm > 0).length;
+    const tv = s[E.tv] ?? 0;
+    const blocos: Bloco[] = [
+      {
+        tipo: "destaque",
+        kicker: `${d.cargo.nome} · ${c.partido} · nº ${c.n} · ${nomeRecorte}`,
+        titulo: c.nome,
+        sub: `${c.nomeCompleto} · ${c.agr}`,
+        sit: vSit(c),
+        candidato: c.id,
+      },
+      ...avisosCargo(B, d),
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: "Votos no recorte", valor: nf(v), sub: `${fmtPct(razao(v, validos), 1)} dos válidos` },
+          { rotulo: "Posição no recorte", valor: pos ? `${pos}º` : "–", sub: `de ${nf(rk.filter((x) => x.v > 0).length)} com voto` },
+          { rotulo: "Peso no total dele", valor: fmtPct(razao(v, c.votos), 1), sub: `de ${nf(c.votos)} votos na BA` },
+          { rotulo: "Municípios", valor: nf(lista.length), sub: `com voto em ${nf(comVoto)}` },
+          { rotulo: "1º lugar em", valor: `${nf(primeiro)} cidades`, sub: `de ${nf(lista.length)}` },
+          { rotulo: "Eleitorado", valor: nf(s[E.el] ?? 0), sub: `comparecimento ${fmtPct(razao(s[E.co] ?? 0, s[E.el] ?? 0), 1)}` },
+          { rotulo: "Brancos e nulos", valor: fmtPct(razao((s[E.vb] ?? 0) + (s[E.vn] ?? 0), tv), 1), sub: `${nf((s[E.vb] ?? 0) + (s[E.vn] ?? 0))} votos` },
+          ...(rk[0] && rk[0].ref.i !== i
+            ? [{ rotulo: "Distância do 1º", valor: nf(rk[0].v - v), sub: rotuloCand(rk[0].ref.c) }]
+            : rk[1]
+              ? [{ rotulo: "Vantagem sobre o 2º", valor: nf(v - rk[1].v), sub: rotuloCand(rk[1].ref.c) }]
+              : []),
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `Ranking do cargo · ${nomeRecorte}`,
+        arquivo: arquivo("dossie2-ranking", c.nome, nomeRecorte),
+        ordem: [0, false],
+        pagina: 15,
+        linhas: rk
+          .filter((x) => x.v > 0)
+          .map((x, k) => [k + 1, vCand(x.ref.c), x.ref.c.partido, x.v, razao(x.v, validos), x.v - v]),
+        colunas: [
+          col("Pos.", "pos"),
+          col("Candidato", "cand"),
+          col("Partido", "texto"),
+          col("Votos", "int", { barra: true }),
+          col("% válidos", "pct"),
+          col(`Diferença p/ ${c.nome}`, "dif"),
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: "Cidade a cidade",
+        arquivo: arquivo("dossie2-cidades", c.nome, nomeRecorte),
+        busca: lista.length > 10,
+        ordem: [2, true],
+        linhas: cidades.map((x) => [
+          vMun(B, x.mi),
+          B.muns[x.mi]?.ti ?? "",
+          x.vm,
+          razao(x.vm, x.vv),
+          x.r,
+          razao(x.vm, v),
+          x.lider ? rotuloCand(x.lider) : "–",
+          x.r === 1 ? 0 : x.vm - x.liderV,
+        ]),
+        colunas: [
+          col("Município", "mun"),
+          col("Território", "texto"),
+          col("Votos", "int", { barra: true }),
+          col("% válidos na cidade", "pct"),
+          col("Posição na cidade", "pos"),
+          col("% do recorte", "pct"),
+          col("Mais votado", "texto"),
+          col("Diferença p/ o 1º", "dif"),
+        ],
+      },
+    ];
     return blocos;
   },
 });
