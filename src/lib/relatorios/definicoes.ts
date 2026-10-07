@@ -1026,12 +1026,7 @@ add({
   gerar(B, st) {
     const ids = (st.cands ?? "").split(",").filter((id) => B.candPorId.has(id));
     if (!ids.length) {
-      const p = B.candPorId.get(candidatoPadrao(B));
-      if (p) {
-        ids.push(p.c.id);
-        const s = B.cargos[p.slug].cargo.candidatos.find((c) => c.id !== p.c.id);
-        if (s) ids.push(s.id);
-      }
+      ids.push(...B.cargos.governador.cargo.candidatos.slice(0, 3).map((c) => c.id));
     }
     const cs = ids.map((id) => B.candPorId.get(id)!).filter(Boolean);
     if (!cs.length) return [{ tipo: "aviso", texto: "Adicione ao menos um candidato." }];
