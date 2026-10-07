@@ -756,24 +756,6 @@ add({
       },
       {
         tipo: "tabela",
-        titulo: `Ranking do cargo · ${nomeRecorte}`,
-        arquivo: arquivo("dossie2-ranking", c.nome, nomeRecorte),
-        ordem: [0, false],
-        pagina: 15,
-        linhas: rk
-          .filter((x) => x.v > 0)
-          .map((x, k) => [k + 1, vCand(x.ref.c), x.ref.c.partido, x.v, razao(x.v, validos), x.v - v]),
-        colunas: [
-          col("Pos.", "pos"),
-          col("Candidato", "cand"),
-          col("Partido", "texto"),
-          col("Votos", "int", { barra: true }),
-          col("% válidos", "pct"),
-          col(`Diferença p/ ${c.nome}`, "dif"),
-        ],
-      },
-      {
-        tipo: "tabela",
         titulo: "Cidade a cidade",
         arquivo: arquivo("dossie2-cidades", c.nome, nomeRecorte),
         busca: lista.length > 10,
