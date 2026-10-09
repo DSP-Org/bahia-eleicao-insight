@@ -6,6 +6,7 @@ const medir = (s: string) => s.length * 4;
 const tabela = (quantidade: number): BlocoTabela => ({
   tipo: "tabela",
   titulo: "Comparação",
+  arquivo: "comparacao",
   colunas: [
     { titulo: "Bairro / comunidade", tipo: "texto" },
     ...Array.from({ length: quantidade }, () => ({ titulo: "Candidato (Governador)", tipo: "int" as const })),
