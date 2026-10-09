@@ -2008,10 +2008,14 @@ add({
     const agl = st.agl ?? "com";
     const us = base.unidades(agl).filter((u) => u.idx.length);
     const pct = st.med === "pct";
+    const votosDe = (r: RefCand, idx: number[]) => {
+      const P = preps.get(r.slug);
+      return !P || "erro" in P ? 0 : P.soma(P.porSec.get(r.c.n), idx);
+    };
     const valor = (r: RefCand, idx: number[]) => {
       const P = preps.get(r.slug);
       if (!P || "erro" in P) return 0;
-      const v = P.soma(P.porSec.get(r.c.n), idx);
+      const v = votosDe(r, idx);
       return pct ? razao(v, P.soma(P.vv, idx)) : v;
     };
     const ignorados = (st.cands ?? "").split(",").filter((id) => B.candPorId.get(id)?.slug === "presidente").length;
@@ -2022,7 +2026,7 @@ add({
         itens: refs.map((r) => ({
           rotulo: `${r.c.nome} · ${NOME_CURTO[r.slug]}`,
           valor: pct ? fmtPct(valor(r, base.todas), 1) : nf(valor(r, base.todas)),
-          sub: `${pct ? nf(valor({ ...r }, base.todas) && (() => { const P = preps.get(r.slug); return P && !("erro" in P) ? P.soma(P.porSec.get(r.c.n), base.todas) : 0; })()) + " votos" : "votos"} em ${base.nomeMun}`,
+          sub: `${pct ? `${nf(votosDe(r, base.todas))} votos` : "votos"} em ${base.nomeMun}`,
         })),
       },
       {
