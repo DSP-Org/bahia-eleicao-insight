@@ -63,7 +63,7 @@ export type Base = {
   cargos: Record<Slug, DadosCargo>;
   candPorId: Map<string, RefCand>;
   buscaMun: string[]; // nome sem acento, por índice
-  secoes?: SecoesData;
+  secoes?: SecoesData | undefined;
 };
 
 export function montarBase(meta: Meta, muns: Municipio[], dados: Record<Slug, MunData>): Base {
