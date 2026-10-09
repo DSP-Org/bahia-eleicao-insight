@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { useMemo, useState, type ReactNode } from "react";
 import { FileDown, Link2, LoaderCircle } from "lucide-react";
 import { useMeta, useMunicipios, nf, type MunData } from "@/lib/eleicoes";
@@ -16,6 +16,7 @@ import {
   recorteNome,
   ehSlug,
   type Base,
+  type SecoesData,
   type Slug,
 } from "@/lib/relatorios/base";
 import {
@@ -48,6 +49,7 @@ const CHAVES = [
   "min",
   "cands",
   "med",
+  "loc",
 ] as const;
 
 export const Route = createFileRoute("/relatorios")({
@@ -98,8 +100,15 @@ function useBase(): Base | null {
       gcTime: Infinity,
     })),
   });
+  const { data: secoes } = useQuery({
+    queryKey: ["secoes"],
+    queryFn: () =>
+      fetch("/data/secoes.json").then((r) => (r.ok ? (r.json() as Promise<SecoesData>) : null)),
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
   const versao = qs.map((q) => q.dataUpdatedAt).join();
-  return useMemo(() => {
+  const base = useMemo(() => {
     if (!meta || !muns || qs.some((q) => !q.data)) return null;
     return montarBase(
       meta,
@@ -108,6 +117,7 @@ function useBase(): Base | null {
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [meta, muns, versao]);
+  return useMemo(() => (base ? { ...base, secoes: secoes ?? undefined } : null), [base, secoes]);
 }
 
 function Relatorios() {
@@ -630,6 +640,20 @@ function Controle({
               </button>
             </div>
           )}
+        </Campo>
+      );
+    }
+    case "loc": {
+      const ms = Object.entries(B.secoes?.muns ?? {});
+      return (
+        <Campo rotulo="Município (dados por urna)">
+          <Select value={st.loc ?? ms[0]?.[0] ?? ""} onChange={(v) => definir("loc", v)}>
+            {ms.map(([t, m]) => (
+              <option key={t} value={t}>
+                {B.muns[B.porTse.get(t) ?? -1]?.nome ?? m.nome}
+              </option>
+            ))}
+          </Select>
         </Campo>
       );
     }
