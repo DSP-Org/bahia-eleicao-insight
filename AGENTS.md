@@ -21,3 +21,4 @@
 - Comparison reports live in the Relatórios catalog as exportable tables and keep each office's valid-vote denominator separate, so cross-office percentages remain meaningful.
 - The indicators page derives its cards through a pure calculation module from the static snapshots, labels vote denominators and separates projected from official winners; this keeps statistics testable and avoids conflating Senate votes with voters.
 
+- Urna/local-de-votação data is a separate static snapshot (public/data/secoes.json from scripts/gerar-secoes.py over TSE votacao_secao CSV) for a fixed list of municipalities, loaded optionally into the reports base; keeps existing reports independent of it and the file small.

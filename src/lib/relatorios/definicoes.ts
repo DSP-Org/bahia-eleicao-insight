@@ -46,6 +46,7 @@ export type Estado = {
   min?: string;
   cands?: string; // ids separados por vírgula
   med?: string; // votos | pct
+  loc?: string; // código TSE de município com dados por urna
 };
 export type Controle =
   | "cargo"
@@ -64,7 +65,8 @@ export type Controle =
   | "cargob"
   | "min"
   | "cands"
-  | "med";
+  | "med"
+  | "loc";
 
 export type Relatorio = {
   id: string;
@@ -1588,6 +1590,167 @@ add({
           col("% válidos", "pct"),
           col("Posição entre partidos", "pos"),
           col("Candidato mais votado", "texto"),
+        ],
+      },
+    ];
+  },
+});
+
+// ------------------------------------------------------------------ urnas e locais de votação
+
+add({
+  id: "urnas",
+  grupo: "Locais de votação",
+  titulo: "Urnas e locais de votação",
+  desc: "Votos de um candidato colégio a colégio e urna a urna, nos municípios com dados por seção.",
+  controles: ["loc", "cand"],
+  padrao: {},
+  gerar(B, st) {
+    const S = B.secoes;
+    if (!S) return [{ tipo: "aviso", texto: "Carregando dados das urnas…" }];
+    const tse = S.muns[st.loc ?? ""] ? (st.loc as string) : Object.keys(S.muns)[0];
+    const M = tse ? S.muns[tse] : undefined;
+    if (!M || !tse) return [{ tipo: "aviso", texto: "Nenhum município com dados por urna." }];
+    let ref = B.candPorId.get(st.cand ?? "");
+    if (!ref || !M.cargos[ref.slug]) {
+      const g = B.cargos.governador.cargo.candidatos[0];
+      ref = g ? B.candPorId.get(g.id) : undefined;
+    }
+    if (!ref) return [{ tipo: "aviso", texto: "Escolha um candidato." }];
+    const { c, slug } = ref;
+    const d = B.cargos[slug];
+    const sc = M.cargos[slug];
+    if (!sc) return [{ tipo: "aviso", texto: `O TSE não publicou votos por seção de ${d.cargo.nome}.` }];
+    const avisoTroca =
+      st.cand && st.cand !== c.id
+        ? [{ tipo: "aviso" as const, texto: "O TSE não publicou votos por seção de Presidente; mostrando o candidato a Governador mais votado." }]
+        : [];
+    const nS = M.secoes.length;
+    // votos[num][seção]
+    const porSec = new Map<string, number[]>();
+    const vv = new Array<number>(nS).fill(0);
+    const somar = (rec: Record<string, number[]>, guardar: boolean) => {
+      for (const [num, flat] of Object.entries(rec)) {
+        const arr = new Array<number>(nS).fill(0);
+        for (let k = 0; k < flat.length; k += 2) {
+          arr[flat[k] as number] = flat[k + 1] as number;
+          vv[flat[k] as number] += flat[k + 1] as number;
+        }
+        if (guardar) porSec.set(num, arr);
+      }
+    };
+    somar(sc.c, true);
+    somar(sc.l, false);
+    const nomeNum = new Map(d.cargo.candidatos.map((x) => [x.n, x]));
+    const meus = porSec.get(c.n) ?? new Array<number>(nS).fill(0);
+    // ranking dentro de um conjunto de seções
+    const lider = (idx: number[]) => {
+      const tot: [string, number][] = [...porSec].map(([n, a]) => [n, idx.reduce((s, i) => s + (a[i] ?? 0), 0)]);
+      tot.sort((a, b) => b[1] - a[1]);
+      const meu = idx.reduce((s, i) => s + (meus[i] ?? 0), 0);
+      const pos = meu ? tot.filter((t) => t[1] > meu).length + 1 : null;
+      const top = tot[0];
+      const cTop = top ? nomeNum.get(top[0]) : undefined;
+      return { meu, pos, topV: top?.[1] ?? 0, topNome: cTop ? rotuloCand(cTop) : "–" };
+    };
+    const todas = M.secoes.map((_, i) => i);
+    const geral = lider(todas);
+    const validos = vv.reduce((a, b) => a + b, 0);
+    const bn = (i: number) => (sc.bv[2 * i] ?? 0) + (sc.bv[2 * i + 1] ?? 0);
+    const locais = M.locais.map((l, li) => {
+      const idx = todas.filter((i) => M.secoes[i]?.[2] === li);
+      const r = lider(idx);
+      return { l, idx, ...r, vv: idx.reduce((s, i) => s + (vv[i] ?? 0), 0), bn: idx.reduce((s, i) => s + bn(i), 0) };
+    });
+    const secs = todas.map((i) => {
+      const [z, s, li] = M.secoes[i] as [number, number, number];
+      return { z, s, l: M.locais[li], ...lider([i]), vv: vv[i] ?? 0, bn: bn(i) };
+    });
+    const comVoto = locais.filter((x) => x.idx.length);
+    const melhor = [...comVoto].sort((a, b) => b.meu - a.meu)[0];
+    const melhorPct = [...comVoto].filter((x) => x.vv >= 50).sort((a, b) => razao(b.meu, b.vv) - razao(a.meu, a.vv))[0];
+    const nomeMun = B.muns[B.porTse.get(tse) ?? -1]?.nome ?? M.nome;
+    const curto = (s: string) => (s.length > 38 ? `${s.slice(0, 36)}…` : s);
+    return [
+      {
+        tipo: "destaque",
+        kicker: `${d.cargo.nome} · ${c.partido} · nº ${c.n} · ${nomeMun}`,
+        titulo: c.nome,
+        sub: `${c.nomeCompleto} · ${c.agr}`,
+        sit: vSit(c),
+        candidato: c.id,
+      },
+      ...avisoTroca,
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: "Votos no município", valor: nf(geral.meu), sub: `${fmtPct(razao(geral.meu, validos), 1)} dos válidos` },
+          { rotulo: "Posição no município", valor: geral.pos ? `${geral.pos}º` : "–", sub: `1º: ${geral.topNome}` },
+          { rotulo: "Locais de votação", valor: nf(locais.length), sub: `1º lugar em ${nf(locais.filter((x) => x.pos === 1).length)}` },
+          { rotulo: "Urnas (seções)", valor: nf(nS), sub: `1º lugar em ${nf(secs.filter((x) => x.pos === 1).length)}` },
+          { rotulo: "Urnas sem voto dele", valor: nf(secs.filter((x) => !x.meu).length), sub: `de ${nf(nS)}` },
+          ...(melhor ? [{ rotulo: "Local com mais votos", valor: nf(melhor.meu), sub: curto(melhor.l.nome) }] : []),
+          ...(melhorPct ? [{ rotulo: "Maior percentual", valor: fmtPct(razao(melhorPct.meu, melhorPct.vv), 1), sub: curto(melhorPct.l.nome) }] : []),
+        ],
+      },
+      {
+        tipo: "nota",
+        texto: `Fonte: ${S.fonte}. Válidos = votos nominais${d.proporcional ? " + legenda" : ""} das urnas${slug === "senador" ? " (cada eleitor vota em dois senadores)" : ""}.`,
+      },
+      {
+        tipo: "tabela",
+        titulo: "Por local de votação",
+        arquivo: arquivo("locais", c.nome, nomeMun),
+        busca: locais.length > 10,
+        ordem: [3, true],
+        linhas: locais.map((x) => [
+          x.l.nome,
+          x.l.end,
+          x.idx.length,
+          x.meu,
+          razao(x.meu, x.vv),
+          x.vv,
+          x.pos,
+          x.topNome,
+          x.pos === 1 ? 0 : x.meu - x.topV,
+        ]),
+        colunas: [
+          col("Local de votação", "texto"),
+          col("Endereço", "texto"),
+          col("Urnas", "int"),
+          col("Votos", "int", { barra: true }),
+          col("% válidos", "pct"),
+          col("Válidos", "int"),
+          col("Posição", "pos"),
+          col("Mais votado", "texto"),
+          col("Diferença p/ o 1º", "dif"),
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: "Urna a urna",
+        arquivo: arquivo("urnas", c.nome, nomeMun),
+        busca: true,
+        ordem: [3, true],
+        linhas: secs.map((x) => [
+          `${x.z} / ${x.s}`,
+          x.l?.nome ?? "",
+          x.vv,
+          x.meu,
+          razao(x.meu, x.vv),
+          x.bn,
+          x.pos,
+          x.topNome,
+        ]),
+        colunas: [
+          col("Zona / seção", "texto"),
+          col("Local de votação", "texto"),
+          col("Válidos", "int"),
+          col("Votos", "int", { barra: true }),
+          col("% válidos", "pct"),
+          col("Brancos e nulos", "int"),
+          col("Posição", "pos"),
+          col("Mais votado", "texto"),
         ],
       },
     ];

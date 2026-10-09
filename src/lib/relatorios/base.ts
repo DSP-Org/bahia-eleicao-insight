@@ -46,6 +46,16 @@ export type DadosCargo = {
 
 export type RefCand = { c: Candidato; i: number; slug: Slug };
 
+// Votos seção a seção (public/data/secoes.json, gerado por scripts/gerar-secoes.py) só para alguns municípios.
+export type SecoesCargo = { bv: number[]; c: Record<string, number[]>; l: Record<string, number[]> };
+export type SecoesMun = {
+  nome: string;
+  locais: { n: string; z: number; nome: string; end: string }[];
+  secoes: [number, number, number][]; // zona, seção, índice do local
+  cargos: Partial<Record<Slug, SecoesCargo>>;
+};
+export type SecoesData = { geradoEm: string; fonte: string; muns: Record<string, SecoesMun> };
+
 export type Base = {
   meta: Meta;
   muns: Municipio[];
@@ -53,6 +63,7 @@ export type Base = {
   cargos: Record<Slug, DadosCargo>;
   candPorId: Map<string, RefCand>;
   buscaMun: string[]; // nome sem acento, por índice
+  secoes?: SecoesData | undefined;
 };
 
 export function montarBase(meta: Meta, muns: Municipio[], dados: Record<Slug, MunData>): Base {
