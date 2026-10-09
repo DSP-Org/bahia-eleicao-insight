@@ -50,6 +50,7 @@ const CHAVES = [
   "cands",
   "med",
   "loc",
+  "agl",
 ] as const;
 
 export const Route = createFileRoute("/relatorios")({
