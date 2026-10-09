@@ -1626,7 +1626,7 @@ add({
     if (!sc) return [{ tipo: "aviso", texto: `O TSE não publicou votos por seção de ${d.cargo.nome}.` }];
     const avisoTroca =
       st.cand && st.cand !== c.id
-        ? [{ tipo: "aviso" as const, texto: "O TSE não publicou votos por seção de Presidente; mostrando o candidato a Governador mais votado." }]
+        ? [{ tipo: "aviso" as const, texto: "O TSE não publicou votos por seção desse cargo; mostrando o candidato a Governador mais votado." }]
         : [];
     const nS = M.secoes.length;
     // votos[num][seção]
@@ -1875,7 +1875,7 @@ add({
         candidato: c.id,
       },
       ...(st.cand && st.cand !== c.id
-        ? [{ tipo: "aviso" as const, texto: "Sem votos por seção de Presidente; mostrando o candidato a Governador mais votado." }]
+        ? [{ tipo: "aviso" as const, texto: "Sem votos por seção para esse cargo; mostrando o candidato a Governador mais votado." }]
         : []),
       {
         tipo: "numeros",
@@ -2021,9 +2021,9 @@ add({
       const v = votosDe(r, idx);
       return pct ? razao(v, P.soma(P.vv, idx)) : v;
     };
-    const ignorados = (st.cands ?? "").split(",").filter((id) => B.candPorId.get(id)?.slug === "presidente").length;
+    const ignorados = refs.filter((r) => { const P = preps.get(r.slug); return !P || "erro" in P; }).length;
     return [
-      ...(ignorados ? [{ tipo: "aviso" as const, texto: "Candidatos a Presidente ficam de fora: o TSE não publicou votos por seção desse cargo." }] : []),
+      ...(ignorados ? [{ tipo: "aviso" as const, texto: "Alguns candidatos ficam de fora: o TSE não publicou votos por seção do cargo deles." }] : []),
       {
         tipo: "numeros",
         itens: refs.map((r) => ({
