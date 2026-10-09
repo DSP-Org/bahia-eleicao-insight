@@ -6,38 +6,16 @@ import reportLogo from "@/assets/logo-relatorio.png.asset.json";
 import logoLocal from "@/assets/logo-barras.png";
 import type { Bloco, BlocoTabela, Coluna } from "@/lib/relatorios/blocos";
 import { linhasIniciais, textoCelula } from "@/lib/relatorios/blocos";
+import { layoutTabelaPDF } from "@/lib/report-pdf-layout";
 
 type Entrada = { titulo: string; grupo: string; filtros: string; blocos: Bloco[] };
 type Orientacao = "retrato" | "paisagem";
 
-const PESO: Record<Coluna["tipo"], number> = {
-  cand: 2.2,
-  mun: 1.6,
-  texto: 1.6,
-  sit: 1.5,
-  int: 1,
-  pct: 0.95,
-  pos: 0.65,
-  dif: 1,
-  corr: 0.9,
-};
 const NUMERICO = new Set<Coluna["tipo"]>(["int", "pct", "pos", "dif", "corr"]);
 const A4: Record<Orientacao, readonly [number, number]> = {
   retrato: [595.28, 841.89],
   paisagem: [841.89, 595.28],
 };
-
-// Estima a largura que a tabela precisa. Títulos longos pesam mais, sobretudo em
-// colunas numéricas, nas quais o título costuma ser mais largo que os valores.
-function orientacaoTabela(t: BlocoTabela): Orientacao {
-  if (t.apresentacao?.tipo === "bancadas") return "retrato";
-  const peso = t.colunas.reduce((soma, coluna, i) => {
-    const base = i === 0 && coluna.tipo === "texto" ? 1.9 : PESO[coluna.tipo];
-    const excessoTitulo = Math.max(0, coluna.titulo.length - (NUMERICO.has(coluna.tipo) ? 11 : 18));
-    return soma + base + Math.min(0.8, excessoTitulo * 0.035);
-  }, 0);
-  return peso <= 6.6 ? "retrato" : "paisagem";
-}
 
 export async function baixarRelatorioPDF(r: Entrada) {
   const doc = await PDFDocument.create();
@@ -58,6 +36,12 @@ export async function baixarRelatorioPDF(r: Entrada) {
   const logoTam = logo ? logo.scaleToFit(120, 39) : { width: 0, height: 0 };
   const font = await doc.embedFont(regular, { subset: true });
   const bold = await doc.embedFont(negrito, { subset: true });
+  const layouts = new Map(
+    r.blocos.filter((b): b is BlocoTabela => b.tipo === "tabela").map((t) => [
+      t,
+      layoutTabelaPDF(t, (texto, forte) => (forte ? bold : font).widthOfTextAtSize(texto, 7.5)),
+    ]),
+  );
   const css = getComputedStyle(document.documentElement);
   const cor = (token: string) => {
     const raw = css.getPropertyValue(token).trim().replace("#", "");
@@ -74,7 +58,8 @@ export async function baixarRelatorioPDF(r: Entrada) {
   const light = cor("--report-surface"),
     line = cor("--report-line"),
     paper = cor("--report-paper");
-  let orientacao: Orientacao = "retrato";
+  // A abertura acompanha a primeira tabela, sem uma capa retrato isolada.
+  let orientacao: Orientacao = layouts.values().next().value?.orientacao ?? "retrato";
   let [W, H] = A4[orientacao];
   const M = 36,
     RODAPE = 56;
@@ -225,7 +210,7 @@ export async function baixarRelatorioPDF(r: Entrada) {
       );
       y -= alt + 10;
     } else if (b.tipo === "tabela") {
-      const proxima = orientacaoTabela(b);
+      const proxima = layouts.get(b)?.orientacao ?? "retrato";
       if (proxima !== orientacao) novaPagina(proxima);
       desenharTabela(b);
     }
@@ -236,14 +221,13 @@ export async function baixarRelatorioPDF(r: Entrada) {
       desenharBancadas(t);
       return;
     }
-    const pesos = t.colunas.map((c, i) => (i === 0 && c.tipo === "texto" ? 1.9 : PESO[c.tipo]));
-    const soma = pesos.reduce((a, b) => a + b, 0);
-    const larg = pesos.map((p) => (U * p) / soma);
+    const larg = layouts.get(t)?.larguras ?? t.colunas.map(() => U / t.colunas.length);
     const cab = t.colunas.map((c, i) => quebrar(c.titulo, (larg[i] ?? 0) - 10, 7.5, bold));
     const altCab = Math.max(...cab.map((l) => l.length)) * 10 + 12;
     const cabecalho = (continuacao: boolean) => {
-      escrever(page, `${t.titulo}${continuacao ? " (continuação)" : ""}`, M, y - 4, 11, true);
-      y -= 16;
+      const titulo = quebrar(`${t.titulo}${continuacao ? " (continuação)" : ""}`, U, 11, bold);
+      titulo.forEach((l, i) => escrever(page, l, M, y - 4 - i * 14, 11, true));
+      y -= titulo.length * 14 + 2;
       page.drawRectangle({ x: M, y: y - altCab, width: U, height: altCab, color: ink });
       let x = M;
       cab.forEach((ls, i) => {
