@@ -17,11 +17,11 @@ export function layoutTabelaPDF(
   const limites = tabela.colunas.map((coluna, i) => {
     const valores = tabela.linhas.map((linha) => textoCelula(linha[i] ?? null, coluna));
     const numero = NUMERICO.has(coluna.tipo);
-    const palavra = Math.max(0, ...valores.flatMap((v) => v.split(/\s+/).map((p) => medir(p))));
-    const valor = Math.max(0, ...valores.map((v) => medir(v)));
+    const palavra = valores.reduce((max, v) => v.split(/\s+/).reduce((n, p) => Math.max(n, medir(p)), max), 0);
+    const valor = valores.reduce((max, v) => Math.max(max, medir(v)), 0);
     const titulo = Math.max(0, ...coluna.titulo.split(/\s+/).map((p) => medir(p, true)));
     const minimo = numero
-      ? Math.max(32, valor + 10, Math.min(titulo + 10, 62))
+      ? Math.max(32, valor + 10, titulo + 10)
       : Math.max(48, Math.min(palavra + 10, 86));
     const ideal = numero ? minimo : Math.max(minimo, Math.min(valor + 10, 160));
     return { minimo, ideal };
