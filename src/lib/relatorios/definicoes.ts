@@ -1838,7 +1838,7 @@ add({
   padrao: {},
   gerar(B, st) {
     let ref = B.candPorId.get(st.cand ?? "");
-    if (!ref || ref.slug === "presidente") {
+    if (!ref || !B.secoes?.muns[st.loc ?? Object.keys(B.secoes?.muns ?? {})[0] ?? ""]?.cargos[ref.slug]) {
       const g = B.cargos.governador.cargo.candidatos[0];
       ref = g ? B.candPorId.get(g.id) : undefined;
     }
@@ -2000,7 +2000,7 @@ add({
   gerar(B, st) {
     let ids = (st.cands ?? "").split(",").filter((id) => {
       const r = B.candPorId.get(id);
-      return r && r.slug !== "presidente";
+      return !!r;
     });
     if (!ids.length) ids = B.cargos.governador.cargo.candidatos.slice(0, 3).map((x) => x.id);
     const refs = ids.map((id) => B.candPorId.get(id)!).filter(Boolean);
