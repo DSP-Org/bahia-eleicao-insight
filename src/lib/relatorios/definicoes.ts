@@ -48,6 +48,7 @@ export type Estado = {
   cands?: string; // ids separados por vírgula
   med?: string; // votos | pct
   loc?: string; // código TSE de município com dados por urna
+  agl?: string; // com, local ou secao
 };
 export type Controle =
   | "cargo"
@@ -67,7 +68,8 @@ export type Controle =
   | "min"
   | "cands"
   | "med"
-  | "loc";
+  | "loc"
+  | "agl";
 
 export type Relatorio = {
   id: string;
