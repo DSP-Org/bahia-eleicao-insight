@@ -13,3 +13,4 @@
 - [x] Verify indicator calculations, cargo/candidate filters and phone layouts.
 - [x] Widen the logo bar that holds the numeral 5 so the 5 fits, and refresh icons and the report logo.
 - [x] Make report PDFs choose portrait or landscape according to content width and visually verify representative exports.
+- [ ] Prefer portrait using measured table content and wrapped headers; verify all voting-place report PDFs and preserve existing reports.
