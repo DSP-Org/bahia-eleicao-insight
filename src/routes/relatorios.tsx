@@ -190,6 +190,9 @@ function Relatorios() {
       rel.controles.includes("cand") ? (B.candPorId.get(ef.cand ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("cand2") ? (B.candPorId.get(ef.cand2 ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("mun") ? (B.muns[B.porTse.get(ef.mun ?? "") ?? -1]?.nome ?? "") : "",
+      rel.controles.includes("loc") && B.secoes
+        ? (B.muns[B.porTse.get(ef.loc ?? Object.keys(B.secoes.muns)[0] ?? "") ?? -1]?.nome ?? "")
+        : "",
       rel.controles.includes("muns")
         ? (() => {
             const n = (ef.muns ?? "").split(",").map((t) => B.muns[B.porTse.get(t) ?? -1]?.nome).filter(Boolean);
