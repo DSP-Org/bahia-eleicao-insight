@@ -1,16 +1,23 @@
 # Gera public/data/secoes.json: votos seção a seção e locais de votação dos municípios escolhidos.
-# Fonte: TSE Dados Abertos — votacao_secao_2026_BA.zip (CSV latin-1, ';').
-# Uso: baixe e descompacte o zip, depois: python3 scripts/gerar-secoes.py votacao_secao_2026_BA.csv
+# Fonte: TSE Dados Abertos — votacao_secao_2026_BA.zip (estaduais/senado/governo) e
+# votacao_secao_2026_BR.zip (Presidente, todas as UFs; filtramos BA). CSV latin-1, ';'.
+# Uso: python3 scripts/gerar-secoes.py votacao_secao_2026_BA.csv votacao_secao_2026_BR.csv
 import csv, json, sys
 from datetime import datetime, timezone
 
 MUNS = {"35653", "37460", "37656", "39144"}  # Ibotirama, Muquém do S. Francisco, Oliveira dos Brejinhos, Sítio do Mato
 CARGOS = {"1": "presidente", "3": "governador", "5": "senador", "6": "deputado-federal", "7": "deputado-estadual"}
 
+def linhas():
+    for arq in sys.argv[1:]:
+        with open(arq, encoding="latin-1", newline="") as f:
+            for row in csv.DictReader(f, delimiter=";"):
+                if row["SG_UF"] == "BA":
+                    yield row
+
 out = {}
-with open(sys.argv[1], encoding="latin-1", newline="") as f:
-    r = csv.DictReader(f, delimiter=";")
-    for row in r:
+if True:
+    for row in linhas():
         tse = row["CD_MUNICIPIO"]
         if tse not in MUNS or row["NR_TURNO"] != "1":
             continue
