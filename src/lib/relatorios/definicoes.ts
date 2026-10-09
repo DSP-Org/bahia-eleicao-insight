@@ -23,6 +23,7 @@ import {
   type Base,
   type ChaveRegiao,
   type DadosCargo,
+  type RefCand,
   type Slug,
 } from "./base";
 import type { Bloco, BlocoTabela, Celula, Coluna, ValorCand, ValorMun, ValorSit } from "./blocos";
