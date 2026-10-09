@@ -50,6 +50,7 @@ const CHAVES = [
   "cands",
   "med",
   "loc",
+  "agl",
 ] as const;
 
 export const Route = createFileRoute("/relatorios")({
@@ -171,7 +172,7 @@ function Relatorios() {
   const trocar = (id: string) => {
     // ao mudar de relatório, mantém cargo, recorte, candidato e município
     const n: Estado = { r: id };
-    for (const k of ["cargo", "escopo", "cand", "cand2", "mun", "muns"] as const) {
+    for (const k of ["cargo", "escopo", "cand", "cand2", "mun", "muns", "loc", "cands"] as const) {
       const v = st[k];
       if (v) n[k] = v;
     }
@@ -189,6 +190,9 @@ function Relatorios() {
       rel.controles.includes("cand") ? (B.candPorId.get(ef.cand ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("cand2") ? (B.candPorId.get(ef.cand2 ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("mun") ? (B.muns[B.porTse.get(ef.mun ?? "") ?? -1]?.nome ?? "") : "",
+      rel.controles.includes("loc") && B.secoes
+        ? (B.muns[B.porTse.get(ef.loc ?? Object.keys(B.secoes.muns)[0] ?? "") ?? -1]?.nome ?? "")
+        : "",
       rel.controles.includes("muns")
         ? (() => {
             const n = (ef.muns ?? "").split(",").map((t) => B.muns[B.porTse.get(t) ?? -1]?.nome).filter(Boolean);
@@ -657,6 +661,16 @@ function Controle({
         </Campo>
       );
     }
+    case "agl":
+      return (
+        <Campo rotulo="Agrupar por">
+          <Select value={st.agl ?? "com"} onChange={(v) => definir("agl", v)}>
+            <option value="com">Bairro / comunidade</option>
+            <option value="local">Local de votação</option>
+            <option value="secao">Urna (seção)</option>
+          </Select>
+        </Campo>
+      );
     case "med":
       return (
         <Campo rotulo="Mostrar nas colunas">

@@ -23,6 +23,7 @@ import {
   type Base,
   type ChaveRegiao,
   type DadosCargo,
+  type RefCand,
   type Slug,
 } from "./base";
 import type { Bloco, BlocoTabela, Celula, Coluna, ValorCand, ValorMun, ValorSit } from "./blocos";
@@ -47,6 +48,7 @@ export type Estado = {
   cands?: string; // ids separados por vírgula
   med?: string; // votos | pct
   loc?: string; // código TSE de município com dados por urna
+  agl?: string; // com, local ou secao
 };
 export type Controle =
   | "cargo"
@@ -66,7 +68,8 @@ export type Controle =
   | "min"
   | "cands"
   | "med"
-  | "loc";
+  | "loc"
+  | "agl";
 
 export type Relatorio = {
   id: string;
@@ -1751,6 +1754,301 @@ add({
           col("Brancos e nulos", "int"),
           col("Posição", "pos"),
           col("Mais votado", "texto"),
+        ],
+      },
+    ];
+  },
+});
+
+// Comunidade de um local a partir do endereço do TSE: povoado/distrito/aldeia/assentamento/ilha no meio rural;
+// no meio urbano o TSE quase nunca informa o bairro, então vira "Sede (zona urbana)" ou o bairro quando vier.
+const PREFIXO_COM = /^(POVOADO|DISTRITO|ALDEIA|ASSENTAMENTO|ILHA|FAZENDA|VILA|COMUNIDADE|BAIRRO|LOTEAMENTO)\b/;
+export function comunidadeDe(end: string): { nome: string; zona: "Urbana" | "Rural" } {
+  const partes = end.split(" - ").map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const rural = /ZONA RURAL/.test(end);
+  const cand = partes.filter((p) => !/^ZONA (RURAL|URBANA)$/.test(p));
+  const achado = cand.find((p) => PREFIXO_COM.test(p) && !/^LOTEAMENTO/.test(p));
+  if (achado) {
+    const nome = achado.split(",")[0]!.replace(/^POVOADO (DE |DO |DA )?/, "").trim();
+    return { nome: /^(DISTRITO|ALDEIA|ILHA|ASSENTAMENTO)/.test(achado) ? achado.split(",")[0]! : nome, zona: rural || !/ZONA URBANA/.test(end) ? "Rural" : "Urbana" };
+  }
+  if (rural) return { nome: (cand[0] ?? "Zona rural").split(",")[0]!, zona: "Rural" };
+  const bairro = cand.length >= 2 ? cand[cand.length - 1] : undefined;
+  return { nome: bairro && !/\d|S\/N|SN$/.test(bairro) ? `Sede · ${bairro}` : "Sede (zona urbana)", zona: "Urbana" };
+}
+
+type Unidade = { nome: string; sub: string; idx: number[] };
+function prepUrnas(B: Base, loc: string | undefined, slug: Slug) {
+  const S = B.secoes;
+  if (!S) return { erro: "Carregando dados das urnas…" } as const;
+  const tse = S.muns[loc ?? ""] ? (loc as string) : Object.keys(S.muns)[0];
+  const M = tse ? S.muns[tse] : undefined;
+  if (!M || !tse) return { erro: "Nenhum município com dados por urna." } as const;
+  const sc = M.cargos[slug];
+  if (!sc) return { erro: `O TSE não publicou votos por seção de ${B.cargos[slug].cargo.nome}. Escolha outro cargo.` } as const;
+  const nS = M.secoes.length;
+  const porSec = new Map<string, number[]>();
+  const vv = new Array<number>(nS).fill(0);
+  for (const [rec, guardar] of [[sc.c, true], [sc.l, false]] as const)
+    for (const [num, flat] of Object.entries(rec)) {
+      const arr = new Array<number>(nS).fill(0);
+      for (let k = 0; k < flat.length; k += 2) {
+        arr[flat[k] as number] = flat[k + 1] as number;
+        vv[flat[k] as number] += flat[k + 1] as number;
+      }
+      if (guardar) porSec.set(num, arr);
+    }
+  const bn = M.secoes.map((_, i) => (sc.bv[2 * i] ?? 0) + (sc.bv[2 * i + 1] ?? 0));
+  const todas = M.secoes.map((_, i) => i);
+  const unidades = (agl: string | undefined): Unidade[] => {
+    if (agl === "secao")
+      return todas.map((i) => {
+        const [z, s, li] = M.secoes[i] as [number, number, number];
+        return { nome: `${z} / ${s}`, sub: M.locais[li]?.nome ?? "", idx: [i] };
+      });
+    if (agl === "local")
+      return M.locais.map((l, li) => ({
+        nome: l.nome,
+        sub: comunidadeDe(l.end).nome,
+        idx: todas.filter((i) => M.secoes[i]?.[2] === li),
+      }));
+    const g = new Map<string, Unidade>();
+    M.locais.forEach((l, li) => {
+      const c = comunidadeDe(l.end);
+      let u = g.get(c.nome);
+      if (!u) g.set(c.nome, (u = { nome: c.nome, sub: c.zona, idx: [] }));
+      for (const i of todas) if (M.secoes[i]?.[2] === li) u.idx.push(i);
+    });
+    return [...g.values()];
+  };
+  const soma = (a: number[] | undefined, idx: number[]) => idx.reduce((s, i) => s + (a?.[i] ?? 0), 0);
+  const ranking = (idx: number[]) =>
+    [...porSec].map(([n, a]) => [n, soma(a, idx)] as [string, number]).sort((a, b) => b[1] - a[1]);
+  const nomeMun = B.muns[B.porTse.get(tse) ?? -1]?.nome ?? M.nome;
+  return { S, M, tse, nomeMun, porSec, vv, bn, todas, unidades, soma, ranking } as const;
+}
+const AGL_NOME: Record<string, string> = { com: "Bairro / comunidade", local: "Local de votação", secao: "Urna (zona / seção)" };
+
+add({
+  id: "urnas-comunidade",
+  grupo: "Locais de votação",
+  titulo: "Candidato por bairro / comunidade",
+  desc: "Junta os locais de votação por povoado, distrito ou sede e mostra a força do candidato em cada comunidade e na zona urbana × rural.",
+  controles: ["loc", "cand"],
+  padrao: {},
+  gerar(B, st) {
+    let ref = B.candPorId.get(st.cand ?? "");
+    if (!ref || ref.slug === "presidente") {
+      const g = B.cargos.governador.cargo.candidatos[0];
+      ref = g ? B.candPorId.get(g.id) : undefined;
+    }
+    if (!ref) return [{ tipo: "aviso", texto: "Escolha um candidato." }];
+    const P = prepUrnas(B, st.loc, ref.slug);
+    if ("erro" in P) return [{ tipo: "aviso", texto: P.erro as string }];
+    const { c, slug } = ref;
+    const d = B.cargos[slug];
+    const meus = P.porSec.get(c.n);
+    const nomeNum = new Map(d.cargo.candidatos.map((x) => [x.n, x]));
+    const linhaDe = (u: Unidade) => {
+      const rk = P.ranking(u.idx);
+      const meu = P.soma(meus, u.idx);
+      const vv = P.soma(P.vv, u.idx);
+      const pos = meu ? rk.filter((t) => t[1] > meu).length + 1 : null;
+      const top = rk[0];
+      const ct = top ? nomeNum.get(top[0]) : undefined;
+      return { u, meu, vv, pos, topV: top?.[1] ?? 0, top: ct ? rotuloCand(ct) : "–" };
+    };
+    const coms = P.unidades("com").map(linhaDe);
+    const zonas = (["Urbana", "Rural"] as const).map((z) =>
+      linhaDe({ nome: z, sub: "", idx: P.unidades("com").filter((u) => u.sub === z).flatMap((u) => u.idx) }),
+    );
+    const total = P.soma(meus, P.todas);
+    const validos = P.soma(P.vv, P.todas);
+    const forte = [...coms].filter((x) => x.vv >= 50).sort((a, b) => razao(b.meu, b.vv) - razao(a.meu, a.vv))[0];
+    return [
+      {
+        tipo: "destaque",
+        kicker: `${d.cargo.nome} · ${c.partido} · nº ${c.n} · ${P.nomeMun}`,
+        titulo: c.nome,
+        sub: `${c.nomeCompleto} · ${c.agr}`,
+        sit: vSit(c),
+        candidato: c.id,
+      },
+      ...(st.cand && st.cand !== c.id
+        ? [{ tipo: "aviso" as const, texto: "Sem votos por seção de Presidente; mostrando o candidato a Governador mais votado." }]
+        : []),
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: "Votos no município", valor: nf(total), sub: `${fmtPct(razao(total, validos), 1)} dos válidos` },
+          { rotulo: "Comunidades", valor: nf(coms.length), sub: `1º lugar em ${nf(coms.filter((x) => x.pos === 1).length)}` },
+          ...zonas.filter((z) => z.vv).map((z) => ({
+            rotulo: `Zona ${z.u.nome.toLowerCase()}`,
+            valor: nf(z.meu),
+            sub: `${fmtPct(razao(z.meu, z.vv), 1)} dos válidos · ${fmtPct(razao(z.meu, total), 0)} dos votos dele`,
+          })),
+          ...(forte ? [{ rotulo: "Comunidade mais forte", valor: fmtPct(razao(forte.meu, forte.vv), 1), sub: forte.u.nome }] : []),
+        ],
+      },
+      {
+        tipo: "nota",
+        texto: "Comunidade identificada pelo endereço do local de votação no TSE. Na sede, o TSE raramente informa o bairro, então os colégios urbanos ficam juntos em \"Sede\".",
+      },
+      {
+        tipo: "tabela",
+        titulo: "Por bairro / comunidade",
+        arquivo: arquivo("comunidades", c.nome, P.nomeMun),
+        busca: coms.length > 10,
+        ordem: [3, true],
+        linhas: coms.map((x) => [x.u.nome, x.u.sub, x.u.idx.length, x.meu, razao(x.meu, x.vv), x.vv, x.pos, x.top, x.pos === 1 ? 0 : x.meu - x.topV]),
+        colunas: [
+          col("Comunidade", "texto"),
+          col("Zona", "texto"),
+          col("Urnas", "int"),
+          col("Votos", "int", { barra: true }),
+          col("% válidos", "pct"),
+          col("Válidos", "int"),
+          col("Posição", "pos"),
+          col("Mais votado", "texto"),
+          col("Diferença p/ o 1º", "dif"),
+        ],
+      },
+    ];
+  },
+});
+
+add({
+  id: "urnas-disputa",
+  grupo: "Locais de votação",
+  titulo: "Quem venceu em cada local",
+  desc: "Para um cargo, o vencedor, o 2º colocado e a margem em cada comunidade, local de votação ou urna.",
+  controles: ["loc", "cargo", "agl"],
+  padrao: { cargo: "governador" },
+  gerar(B, st) {
+    const slug = ehSlug(st.cargo) ? st.cargo : "governador";
+    const P = prepUrnas(B, st.loc, slug);
+    if ("erro" in P) return [{ tipo: "aviso", texto: P.erro as string }];
+    const d = B.cargos[slug];
+    const nomeNum = new Map(d.cargo.candidatos.map((x) => [x.n, x]));
+    const nm = (n?: string) => {
+      const x = n ? nomeNum.get(n) : undefined;
+      return x ? rotuloCand(x) : "–";
+    };
+    const agl = st.agl ?? "com";
+    const us = P.unidades(agl).filter((u) => u.idx.length);
+    const linhas = us.map((u) => {
+      const rk = P.ranking(u.idx);
+      const vv = P.soma(P.vv, u.idx);
+      const [a, b] = [rk[0], rk[1]];
+      return { u, vv, a, b, bn: P.soma(P.bn, u.idx) };
+    });
+    const venc = new Map<string, number>();
+    for (const l of linhas) if (l.a && l.a[1]) venc.set(l.a[0], (venc.get(l.a[0]) ?? 0) + 1);
+    const apertada = [...linhas].filter((l) => l.a && l.b && l.vv >= 50).sort((x, y) => razao(x.a![1] - x.b![1], x.vv) - razao(y.a![1] - y.b![1], y.vv))[0];
+    const geral = P.ranking(P.todas);
+    return [
+      ...avisosCargo(B, d),
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: `Vencedor em ${P.nomeMun}`, valor: nf(geral[0]?.[1] ?? 0), sub: nm(geral[0]?.[0]) },
+          { rotulo: AGL_NOME[agl] ?? "Unidades", valor: nf(linhas.length), sub: `${nf(venc.size)} candidatos venceram em alguma` },
+          ...[...venc].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, q]) => ({ rotulo: "Venceu em", valor: nf(q), sub: nm(n) })),
+          ...(apertada ? [{ rotulo: "Disputa mais apertada", valor: nf(apertada.a![1] - apertada.b![1]), sub: apertada.u.nome }] : []),
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `Vencedor por ${(AGL_NOME[agl] ?? "").toLowerCase()} · ${d.cargo.nome}`,
+        arquivo: arquivo("vencedores", d.cargo.nome, agl, P.nomeMun),
+        busca: linhas.length > 10,
+        ordem: [2, true],
+        linhas: linhas.map((l) => [
+          l.u.nome,
+          l.u.sub,
+          l.vv,
+          nm(l.a?.[0]),
+          razao(l.a?.[1] ?? 0, l.vv),
+          nm(l.b?.[0]),
+          razao(l.b?.[1] ?? 0, l.vv),
+          (l.a?.[1] ?? 0) - (l.b?.[1] ?? 0),
+          l.bn,
+        ]),
+        colunas: [
+          col(AGL_NOME[agl] ?? "Unidade", "texto"),
+          col(agl === "com" ? "Zona" : agl === "local" ? "Comunidade" : "Local", "texto"),
+          col("Válidos", "int"),
+          col("1º colocado", "texto"),
+          col("% do 1º", "pct", { casas: 1 }),
+          col("2º colocado", "texto"),
+          col("% do 2º", "pct", { casas: 1 }),
+          col("Margem (votos)", "int", { barra: true }),
+          col("Brancos e nulos", "int"),
+        ],
+      },
+    ];
+  },
+});
+
+add({
+  id: "urnas-multi",
+  grupo: "Locais de votação",
+  titulo: "Vários candidatos por local",
+  desc: "Coloca vários candidatos lado a lado (inclusive de cargos diferentes) por comunidade, local de votação ou urna.",
+  controles: ["loc", "cands", "agl", "med"],
+  padrao: {},
+  gerar(B, st) {
+    let ids = (st.cands ?? "").split(",").filter((id) => {
+      const r = B.candPorId.get(id);
+      return r && r.slug !== "presidente";
+    });
+    if (!ids.length) ids = B.cargos.governador.cargo.candidatos.slice(0, 3).map((x) => x.id);
+    const refs = ids.map((id) => B.candPorId.get(id)!).filter(Boolean);
+    const base = prepUrnas(B, st.loc, "governador");
+    if ("erro" in base) return [{ tipo: "aviso", texto: base.erro as string }];
+    const preps = new Map<Slug, ReturnType<typeof prepUrnas>>();
+    for (const r of refs) if (!preps.has(r.slug)) preps.set(r.slug, prepUrnas(B, st.loc, r.slug));
+    const agl = st.agl ?? "com";
+    const us = base.unidades(agl).filter((u) => u.idx.length);
+    const pct = st.med === "pct";
+    const votosDe = (r: RefCand, idx: number[]) => {
+      const P = preps.get(r.slug);
+      return !P || "erro" in P ? 0 : P.soma(P.porSec.get(r.c.n), idx);
+    };
+    const valor = (r: RefCand, idx: number[]) => {
+      const P = preps.get(r.slug);
+      if (!P || "erro" in P) return 0;
+      const v = votosDe(r, idx);
+      return pct ? razao(v, P.soma(P.vv, idx)) : v;
+    };
+    const ignorados = (st.cands ?? "").split(",").filter((id) => B.candPorId.get(id)?.slug === "presidente").length;
+    return [
+      ...(ignorados ? [{ tipo: "aviso" as const, texto: "Candidatos a Presidente ficam de fora: o TSE não publicou votos por seção desse cargo." }] : []),
+      {
+        tipo: "numeros",
+        itens: refs.map((r) => ({
+          rotulo: `${r.c.nome} · ${NOME_CURTO[r.slug]}`,
+          valor: pct ? fmtPct(valor(r, base.todas), 1) : nf(valor(r, base.todas)),
+          sub: `${pct ? `${nf(votosDe(r, base.todas))} votos` : "votos"} em ${base.nomeMun}`,
+        })),
+      },
+      {
+        tipo: "nota",
+        texto: pct
+          ? "Percentual sobre os válidos do cargo de cada candidato naquela unidade."
+          : "Quantidade de votos de cada candidato naquela unidade.",
+      },
+      {
+        tipo: "tabela",
+        titulo: `${AGL_NOME[agl] ?? ""} · ${base.nomeMun}`,
+        arquivo: arquivo("varios-candidatos", agl, base.nomeMun),
+        busca: us.length > 10,
+        ordem: [2, true],
+        linhas: us.map((u) => [u.nome, u.sub, ...refs.map((r) => valor(r, u.idx))]),
+        colunas: [
+          col(AGL_NOME[agl] ?? "Unidade", "texto"),
+          col(agl === "com" ? "Zona" : agl === "local" ? "Comunidade" : "Local", "texto"),
+          ...refs.map((r) => col(`${r.c.nome} (${NOME_CURTO[r.slug]})`, pct ? "pct" : "int", pct ? { casas: 1 } : {})),
         ],
       },
     ];
