@@ -129,7 +129,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <footer className="border-t border-border px-4 py-6 text-center text-xs text-muted-foreground">
-          Data5 Analytics · Fonte: Tribunal Superior Eleitoral (resultados.tse.jus.br) · 1º turno, 04/10/2026 · Malha municipal: IBGE
+          Data5 Analytics · Fonte: Tribunal Superior Eleitoral (resultados.tse.jus.br) · 1º turno 04/10/2026 e 2º turno 25/10/2026 · Malha municipal: IBGE
         </footer>
       </div>
     </QueryClientProvider>
