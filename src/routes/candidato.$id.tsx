@@ -47,6 +47,10 @@ function CandPage() {
   const zeros = rows.filter((r) => r.v === 0).length;
   const top10share = pct(byVotes.slice(0, 10).reduce((s, r) => s + r.v, 0), cand.votos);
   const pos = idx + 1;
+  // Presidente: liga o candidato ao outro turno (mesmo número de urna).
+  const outroSlug = cargo.slug === "presidente" ? "presidente-2t" : cargo.slug === "presidente-2t" ? "presidente" : "";
+  const outroC = outroSlug ? meta.cargos.find((c) => c.slug === outroSlug)?.candidatos.find((c) => c.n === cand.n) : undefined;
+  const outro = outroC ? { c: outroC, rotulo: outroSlug === "presidente-2t" ? "Ver 2º turno" : "Ver 1º turno" } : null;
 
   const List = ({ items }: { items: typeof rows }) => (
     <ol className="space-y-1 text-sm">
@@ -64,6 +68,7 @@ function CandPage() {
       <PageHead kicker={`${cargo.nome} · ${cand.partido} · nº ${cand.n}`} title={cand.nome}>
         {cand.nomeCompleto} · {cand.agr}{cand.vice.length ? ` · Vice/suplentes: ${cand.vice.join(", ")}` : ""}
         {" · "}<Link to="/relatorios" search={{ r: "dossie", cand: cand.id }} className="text-primary underline">Dossiê completo (PDF)</Link>
+        {outro && <>{" · "}<Link to="/candidato/$id" params={{ id: outro.c.id }} className="text-primary underline">{outro.rotulo}: {nf(outro.c.votos)} votos ({pf(outro.c.pct)})</Link></>}
       </PageHead>
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
         <Stat label="Votos" value={nf(cand.votos)} />

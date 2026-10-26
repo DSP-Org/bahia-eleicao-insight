@@ -25,10 +25,28 @@ function MapaPage() {
   const [sel, setSel] = useState<string>();
   const { data: meta } = useMeta();
   const { data: muns } = useMunicipios();
-  const { data: md } = useMunData(slug);
+  // Modo "evolucao": 2º turno de Presidente comparado ao 1º, cidade a cidade.
+  const evo = slug === "evolucao";
+  const { data: md } = useMunData(evo ? "presidente-2t" : slug);
+  const { data: md1 } = useMunData(evo ? "presidente" : "");
   const { byIbge } = useIbgeIndex(muns);
-  const cargo = meta?.cargos.find((c) => c.slug === slug);
-  const candIdx = cargo ? cargo.candidatos.findIndex((c) => c.id === cand) : -1;
+  const cargo = meta?.cargos.find((c) => c.slug === (evo ? "presidente-2t" : slug));
+  const cargo1 = meta?.cargos.find((c) => c.slug === "presidente");
+  const candIdx = cargo && !evo ? cargo.candidatos.findIndex((c) => c.id === cand) : -1;
+  // Finalistas: índice no 2º turno e no 1º (casados pelo número do candidato).
+  const fin = useMemo(() => evo && cargo && cargo1 ? cargo.candidatos.slice(0, 2).map((c, i2) => ({ c, i2, i1: cargo1.candidatos.findIndex((x) => x.n === c.n) })) : [], [evo, cargo, cargo1]);
+  const evoMun = (tse: string) => {
+    const r2 = md?.[tse]; const r1 = md1?.[tse];
+    if (!r1 || !r2 || fin.length < 2) return null;
+    const d = fin.map((f) => { const v1 = r1.v[f.i1] ?? 0, v2 = r2.v[f.i2] ?? 0; return { f, v1, v2, p1: pct(v1, r1.vv), p2: pct(v2, r2.vv) }; });
+    return { d, saldo: (d[0]!.p2 - d[0]!.p1) - (d[1]!.p2 - d[1]!.p1) };
+  };
+  const maxSaldo = useMemo(() => {
+    if (!evo || !muns) return 1;
+    let mx = 0.01; for (const m of muns) { const e = evoMun(m.tse); if (e) mx = Math.max(mx, Math.abs(e.saldo)); }
+    return mx;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [evo, muns, md, md1, fin]);
 
   const stats = useMemo(() => {
     if (!md || !cargo) return null;
@@ -49,12 +67,18 @@ function MapaPage() {
   const fill = (ibge: string) => {
     const m = byIbge[ibge]; const r = m && md?.[m.tse];
     if (!r) return "#ddd";
+    if (evo) { const e = evoMun(m.tse); if (!e) return "#ddd"; const k = e.saldo >= 0 ? 0 : 1; return heat(Math.abs(e.saldo), maxSaldo, partyColor(fin[k]!.c.partido)); }
     if (candIdx >= 0) return heat(pct(r.v[candIdx] ?? 0, r.vv), stats?.maxP ?? 100, candColor);
     const w = winner(r); return w >= 0 ? partyColor(cargo.candidatos[w].partido) : "#ddd";
   };
   const tip = (ibge: string) => {
     const m = byIbge[ibge]; const r = m && md?.[m.tse];
     if (!m || !r) return m?.nome ?? "";
+    if (evo) {
+      const e = evoMun(m.tse); if (!e) return m.nome;
+      const sg = (n: number) => `${n >= 0 ? "+" : ""}${n.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}`;
+      return `<b>${m.nome}</b><br/>${e.d.map((x) => `${x.f.c.nome}: ${nf(x.v1)} → <b>${nf(x.v2)}</b> (${sg(x.v2 - x.v1)}) · ${pf(x.p1)} → ${pf(x.p2)}`).join("<br/>")}<br/><span style="opacity:.7">Votos válidos: ${nf(md1?.[m.tse]?.vv ?? 0)} → ${nf(r.vv)}</span>`;
+    }
     const linha = (k: number) => {
       const c = cargo.candidatos[k]; const v = r.v[k] ?? 0;
       return `${c.nome} (${c.partido}): <b>${nf(v)}</b> votos · ${pf(pct(v, r.vv))}`;
@@ -75,8 +99,9 @@ function MapaPage() {
       <div className="mb-4 flex flex-wrap gap-3">
         <Select value={slug} onChange={(v) => { setSlug(v); setCand(""); }}>
           {CARGOS.map((c) => <option key={c.slug} value={c.slug}>{c.nome}</option>)}
+          <option value="evolucao">Presidente – evolução 1º → 2º turno</option>
         </Select>
-        <div className="w-full min-w-0 sm:w-80">
+        {!evo && <div className="w-full min-w-0 sm:w-80">
           <BuscaItem
             itens={cargo.candidatos}
             busca={(c) => slugify(`${c.nome} ${c.partido} ${c.n}`)}
@@ -89,14 +114,14 @@ function MapaPage() {
             rotuloLimpar="Voltar ao mapa de vencedores"
             onEscolher={(c) => setCand(c.id)}
           />
-        </div>
+        </div>}
 
       </div>
       <div className="grid gap-5 lg:grid-cols-[1fr_340px]">
         <div>
           {md ? <MapaBA fill={fill} tooltip={tip} onSelect={setSel} selected={sel} /> : <Loading />}
           <p className="mt-2 text-xs text-muted-foreground">
-            {candIdx >= 0 ? `Tom mais forte = maior % de votos válidos (máx. ${pf(stats?.maxP ?? 0)}).` : "Cor do partido do candidato mais votado em cada município."} Clique em um município para detalhes.
+            {evo && fin.length === 2 ? `Cor de quem mais cresceu em percentual do 1º para o 2º turno (${fin[0]!.c.nome} ou ${fin[1]!.c.nome}); tom mais forte = diferença maior (máx. ${maxSaldo.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} p.p.).` : candIdx >= 0 ? `Tom mais forte = maior % de votos válidos (máx. ${pf(stats?.maxP ?? 0)}).` : "Cor do partido do candidato mais votado em cada município."} Clique em um município para detalhes.
           </p>
         </div>
         <div className="space-y-5">
