@@ -1,6 +1,6 @@
 import { nf, pf, pct, type Cargo, type Municipio, type MunData } from "@/lib/eleicoes";
 
-export type GrupoIndicador = "participacao" | "votos" | "disputa" | "territorio" | "candidato";
+export type GrupoIndicador = "participacao" | "votos" | "disputa" | "territorio" | "candidato" | "turnos";
 export type Indicador = { label: string; value: string; detail: string; textual?: boolean };
 export type SecaoIndicadores = { id: GrupoIndicador; title: string; cards: Indicador[] };
 
@@ -139,4 +139,33 @@ export function recortarCargo(cargo: Cargo, municipios: Municipio[], dados: MunD
     return { ...p, legenda, votosTot: legenda + candidatos.filter((c) => c.partido === p.sg).reduce((s, c) => s + c.votos, 0) };
   });
   return { ...cargo, resumo, candidatos, partidos };
+}
+
+/** Cartões de evolução entre turnos (Presidente): finalistas casados pelo número; percentuais sobre os válidos de cada turno. */
+export function criarEvolucaoTurnos(c1: Cargo, c2: Cargo, municipios: Municipio[], d1: MunData, d2: MunData): SecaoIndicadores {
+  const soma = (d: MunData, f: (r: NonNullable<MunData[string]>) => number) => municipios.reduce((s, m) => s + (d[m.tse] ? f(d[m.tse]!) : 0), 0);
+  const vv1 = soma(d1, (r) => r.vv), vv2 = soma(d2, (r) => r.vv);
+  const co1 = soma(d1, (r) => r.co), co2 = soma(d2, (r) => r.co);
+  const el = soma(d2, (r) => r.el);
+  const sinal = (n: number, f: (n: number) => string) => `${n >= 0 ? "+" : "−"}${f(Math.abs(n))}`;
+  const pp = (n: number) => `${n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} p.p.`;
+  const cards: Indicador[] = [];
+  const fin = c2.candidatos.map((c, i2) => ({ c, i2, i1: c1.candidatos.findIndex((x) => x.n === c.n) })).filter((x) => x.i1 >= 0).slice(0, 2);
+  for (const { c, i1, i2 } of fin) {
+    const v1 = soma(d1, (r) => r.v[i1] ?? 0), v2 = soma(d2, (r) => r.v[i2] ?? 0);
+    cards.push(
+      { label: `${c.nome} no 2º turno`, value: nf(v2), detail: `${pf(pct(v2, vv2))} dos válidos · 1º turno: ${nf(v1)}` },
+      { label: `Ganho de votos · ${c.nome}`, value: sinal(v2 - v1, nf), detail: "Saldo entre os turnos" },
+      { label: `Variação no percentual · ${c.nome}`, value: sinal(pct(v2, vv2) - pct(v1, vv1), pp), detail: `De ${pf(pct(v1, vv1))} para ${pf(pct(v2, vv2))}` },
+    );
+  }
+  const vence = (d: MunData, m: Municipio) => { const r = d[m.tse]; if (!r) return -1; let b = -1, bv = -1; for (const [k, v] of Object.entries(r.v)) if (v > bv) { bv = v; b = Number(k); } return b; };
+  const viradas = municipios.filter((m) => { const a = c1.candidatos[vence(d1, m)], b = c2.candidatos[vence(d2, m)]; return a && b && a.n !== b.n; }).length;
+  cards.push(
+    { label: "Comparecimento no 2º turno", value: nf(co2), detail: `${pf(pct(co2, el))} dos eleitores · ${sinal(co2 - co1, nf)} frente ao 1º turno` },
+    { label: "Variação do comparecimento", value: sinal(pct(co2, el) - pct(co1, soma(d1, (r) => r.el)), pp), detail: "Taxa do 2º turno menos a do 1º" },
+    { label: "Votos válidos no 2º turno", value: nf(vv2), detail: `${sinal(vv2 - vv1, nf)} frente ao 1º turno` },
+    ...(municipios.length > 1 ? [{ label: "Municípios que mudaram de vencedor", value: nf(viradas), detail: "Do 1º para o 2º turno" }] : []),
+  );
+  return { id: "turnos", title: "Evolução entre os turnos", cards };
 }

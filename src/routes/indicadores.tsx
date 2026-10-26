@@ -2,9 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { ArrowUpRight, Search, Users, Vote, Trophy, MapPin, UserRound, LayoutGrid, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, Search, Users, Vote, Trophy, MapPin, UserRound, LayoutGrid, Repeat, type LucideIcon } from "lucide-react";
 import { CARGOS, slugify, type Meta, type Municipio, type MunData } from "@/lib/eleicoes";
-import { criarIndicadores, recortarCargo, type GrupoIndicador, type TipoRecorte } from "@/lib/indicadores";
+import { criarIndicadores, criarEvolucaoTurnos, recortarCargo, type GrupoIndicador, type TipoRecorte } from "@/lib/indicadores";
 import { PageHead, Select } from "@/components/ui-bits";
 import { Button } from "@/components/ui/button";
 import { BuscaItem } from "@/components/relatorios/BuscaItem";
@@ -57,6 +57,7 @@ const grupos: { id: "todos" | GrupoIndicador; label: string; icon: LucideIcon }[
   { id: "disputa", label: "Disputa", icon: Trophy },
   { id: "territorio", label: "Municípios", icon: MapPin },
   { id: "candidato", label: "Candidato", icon: UserRound },
+  { id: "turnos", label: "1º × 2º turno", icon: Repeat },
 ];
 const cores: Record<GrupoIndicador, string> = {
   participacao: "text-chart-2 border-t-chart-2",
@@ -64,6 +65,7 @@ const cores: Record<GrupoIndicador, string> = {
   disputa: "text-chart-4 border-t-chart-4",
   territorio: "text-chart-3 border-t-chart-3",
   candidato: "text-foreground border-t-foreground",
+  turnos: "text-chart-5 border-t-chart-5",
 };
 
 function Indicadores() {
@@ -93,7 +95,13 @@ function Indicadores() {
   // Default raio-x candidate is the most voted inside the current cut, not the first listed.
   const candidato = cargo?.candidatos.find((c) => c.id === candidatoId) ?? (cargo ? [...cargo.candidatos].sort((a, b) => b.votos - a.votos)[0] : undefined);
   const tipoRecorte = (recorte === "ba" ? "ba" : recorte.split(":")[0]) as TipoRecorte;
-  const secoes = useMemo(() => cargo ? criarIndicadores(cargo, munsRecorte, dados[cargo.slug] ?? {}, candidato?.id ?? "", tipoRecorte) : [], [cargo, munsRecorte, dados, candidato, tipoRecorte]);
+  const secoes = useMemo(() => {
+    if (!cargo) return [];
+    const base = criarIndicadores(cargo, munsRecorte, dados[cargo.slug] ?? {}, candidato?.id ?? "", tipoRecorte);
+    const t1 = meta.cargos.find((c) => c.slug === "presidente");
+    // No 2º turno de Presidente, a evolução frente ao 1º turno vem primeiro.
+    return slug === "presidente-2t" && t1 && cargoBase ? [criarEvolucaoTurnos(t1, cargoBase, munsRecorte, dados["presidente"] ?? {}, dados["presidente-2t"] ?? {}), ...base] : base;
+  }, [cargo, cargoBase, meta, slug, munsRecorte, dados, candidato, tipoRecorte]);
   const totalCards = secoes.reduce((t, s) => t + s.cards.length, 0);
   // Text search only helps when there are many cards to scan.
   const mostraBusca = totalCards > 12;
@@ -111,7 +119,7 @@ function Indicadores() {
 
   return (
     <div>
-      <PageHead kicker="Bahia · Resultado do 1º turno" title="Indicadores">
+      <PageHead kicker={slug === "presidente-2t" ? "Bahia · Resultado do 2º turno" : "Bahia · Resultado do 1º turno"} title="Indicadores">
         <span>Participação, votos e força territorial · Eleições 2026 - BA</span>
       </PageHead>
 
@@ -144,7 +152,7 @@ function Indicadores() {
       </div>}
 
       <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
-        <div className="min-w-0"><p className="font-display text-xl font-bold">{cargo.nome}</p><p className="text-xs text-muted-foreground">{recorteAtual.nome}{recorte !== "ba" && ` · ${munsRecorte.length} município${munsRecorte.length > 1 ? "s" : ""}`} · 04 de outubro de 2026</p></div>
+        <div className="min-w-0"><p className="font-display text-xl font-bold">{cargo.nome}</p><p className="text-xs text-muted-foreground">{recorteAtual.nome}{recorte !== "ba" && ` · ${munsRecorte.length} município${munsRecorte.length > 1 ? "s" : ""}`} · {slug === "presidente-2t" ? "25 de outubro de 2026" : "04 de outubro de 2026"}</p></div>
         <span className="shrink-0 font-mono text-xs text-muted-foreground">{quantidade} indicadores</span>
       </div>
       {cargo.slug === "senador" && <p className="mb-6 border-l-2 border-chart-2 pl-3 text-sm text-muted-foreground">Senado: cada eleitor pôde votar em dois candidatos. Percentuais de votação usam o total de votos válidos, não o número de pessoas.</p>}
