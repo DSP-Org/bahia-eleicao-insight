@@ -1473,7 +1473,8 @@ add({
   padrao: { reg: "ti" },
   gerar(B, st) {
     const chave: ChaveRegiao = ehRegiao(st.reg) ? st.reg : "ti";
-    const { lista, g } = somaTurnos(B, munsDoRecorte(B, null), (mi) => B.muns[mi]?.[chave] ?? "");
+    const { t1, t2, lista } = finalistas(B);
+    const { g } = somaTurnos(B, munsDoRecorte(B, null), (mi) => B.muns[mi]?.[chave] ?? "");
     const [a, b] = lista;
     if (!a || !b) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
     const partes = partesEscopo(st.escopos);
