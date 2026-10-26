@@ -40,3 +40,33 @@ describe("Evolução entre turnos (Presidente)", () => {
     expect(v("Municípios que mudaram de vencedor")).toBe("0");
   });
 });
+
+describe("Evolução por território (relatório)", () => {
+  const rel = RELATORIOS.find((r) => r.id === "turnos-territorio")!;
+  const tabelas = (st: Record<string, string>) =>
+    rel
+      .gerar(base, st as never)
+      .filter((b) => b.tipo === "tabela") as unknown as BlocoTabela[];
+
+  it("sem recortes mostra todos os territórios e nenhuma comparação", () => {
+    const [ts] = tabelas({ reg: "ti" });
+    expect(ts.linhas.length).toBe(27);
+    expect(tabelas({ reg: "ti", escopos: "" }).length).toBe(1);
+  });
+
+  it("com dois territórios filtra a tabela e cria a comparação", () => {
+    const escopos = "ti:Velho Chico|ti:Itaparica";
+    const partes = partesEscopo(escopos);
+    expect(partes.length).toBe(2);
+    const ts = tabelas({ reg: "ti", escopos });
+    const principal = ts[0]!;
+    expect(principal.linhas.map((l) => String(l[0])).sort()).toEqual(["Itaparica", "Velho Chico"]);
+    const comp = ts.find((t) => t.titulo.includes("Comparação entre os recortes"))!;
+    expect(comp.linhas.length).toBe(2);
+    expect(comp.linhas.map((l) => recorteNome(partes[comp.linhas.indexOf(l)], base))).toEqual(
+      comp.linhas.map((l) => String(l[0])),
+    );
+    // 16 municípios no Velho Chico + 6 no Itaparica
+    expect(comp.linhas.reduce((s, l) => s + Number(l[1]), 0)).toBe(22);
+  });
+});
