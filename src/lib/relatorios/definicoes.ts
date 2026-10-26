@@ -1468,30 +1468,45 @@ add({
   id: "turnos-territorio",
   grupo: "2º turno · Presidente",
   titulo: "Evolução por território",
-  desc: "Crescimento de cada finalista entre os turnos somado por Território de Identidade ou região do IBGE, com participação e votos herdados.",
-  controles: ["reg"],
+  desc: "Crescimento de cada finalista entre os turnos somado por Território de Identidade ou região do IBGE, com participação e votos herdados. Escolha vários recortes para comparar.",
+  controles: ["reg", "escopos"],
   padrao: { reg: "ti" },
   gerar(B, st) {
     const chave: ChaveRegiao = ehRegiao(st.reg) ? st.reg : "ti";
-    const { lista, g } = somaTurnos(B, munsDoRecorte(B, null), (mi) => B.muns[mi]?.[chave] ?? "");
+    const { t1, t2, lista } = finalistas(B);
+    const { g } = somaTurnos(B, munsDoRecorte(B, null), (mi) => B.muns[mi]?.[chave] ?? "");
     const [a, b] = lista;
     if (!a || !b) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
-    let melhor = { nome: "", pp: -Infinity }, pior = { nome: "", pp: Infinity };
-    const linhas: Celula[][] = [...g].filter(([n]) => n).map(([nome, o]) => {
+    const partes = partesEscopo(st.escopos);
+    const nomesEscolhidos = new Set(
+      partes.flatMap((pt) => {
+        const ss = recorteSet(pt, B);
+        return ss ? munsDoRecorte(B, ss).map((mi) => B.muns[mi]?.[chave] ?? "") : [];
+      }).filter(Boolean),
+    );
+    const todas = [...g].filter(([n]) => n).map(([nome, o]) => {
       const p = lista.map((_, k) => [razao(o.v1[k]!, o.s1[E.vv]!), razao(o.v2[k]!, o.s2[E.vv]!)] as const);
-      const vpA = p[0]![1] - p[0]![0];
-      if (vpA > melhor.pp) melhor = { nome, pp: vpA };
-      if (vpA < pior.pp) pior = { nome, pp: vpA };
       const ga = o.v2[0]! - o.v1[0]!, gb = o.v2[1]! - o.v1[1]!;
-      return [
-        nome, o.n,
-        ...lista.flatMap((_, k) => [p[k]![0], p[k]![1], p[k]![1] - p[k]![0], o.v2[k]! - o.v1[k]!]),
-        (o.s2[E.co] ?? 0) - (o.s1[E.co] ?? 0),
-        pctAbst(o.s2) - pctAbst(o.s1),
-        (o.s1[E.vv] ?? 0) - o.v1[0]! - o.v1[1]!,
-        parcela(ga, gb),
-      ];
+      return {
+        nome,
+        vpA: p[0]![1] - p[0]![0],
+        linha: [
+          nome, o.n,
+          ...lista.flatMap((_, k) => [p[k]![0], p[k]![1], p[k]![1] - p[k]![0], o.v2[k]! - o.v1[k]!]),
+          (o.s2[E.co] ?? 0) - (o.s1[E.co] ?? 0),
+          pctAbst(o.s2) - pctAbst(o.s1),
+          (o.s1[E.vv] ?? 0) - o.v1[0]! - o.v1[1]!,
+          parcela(ga, gb),
+        ] as Celula[],
+      };
     });
+    const visiveis = partes.length ? todas.filter((r) => nomesEscolhidos.has(r.nome)) : todas;
+    const linhas: Celula[][] = visiveis.map((r) => r.linha);
+    let melhor = { nome: "", pp: -Infinity }, pior = { nome: "", pp: Infinity };
+    for (const r of visiveis) {
+      if (r.vpA > melhor.pp) melhor = { nome: r.nome, pp: r.vpA };
+      if (r.vpA < pior.pp) pior = { nome: r.nome, pp: r.vpA };
+    }
     return [
       {
         tipo: "numeros",
@@ -1503,8 +1518,8 @@ add({
       },
       {
         tipo: "tabela",
-        titulo: `Evolução entre turnos por ${REGIOES[chave]}`,
-        arquivo: arquivo("evolucao-turnos-regiao", chave),
+        titulo: `Evolução entre turnos por ${REGIOES[chave]}${partes.length ? ` · ${nomeMulti(B, partes)}` : ""}`,
+        arquivo: arquivo("evolucao-turnos-regiao", chave, nomeMulti(B, partes)),
         busca: true,
         ordem: [4, true],
         pagina: 40,
@@ -1524,6 +1539,40 @@ add({
           col(`Saldo ficou com ${a.c.nome}`, "pct", { casas: 1 }),
         ],
       },
+      ...(partes.length > 1
+        ? [
+            {
+              tipo: "tabela" as const,
+              titulo: "Comparação entre os recortes",
+              arquivo: arquivo("evolucao-territorio-recortes", chave),
+              ordem: [5, false] as [number, boolean],
+              linhas: partes.map((pt): Celula[] => {
+                const ss = recorteSet(pt, B);
+                const a1 = statsRecorte(t1, ss)[E.vv] ?? 0;
+                const a2 = statsRecorte(t2, ss)[E.vv] ?? 0;
+                return [
+                  recorteNome(pt, B),
+                  munsDoRecorte(B, ss).length,
+                  ...lista.flatMap((x) => {
+                    const v1 = somaRecorte(t1.votos[x.i1] ?? [], ss);
+                    const v2 = somaRecorte(t2.votos[x.i2] ?? [], ss);
+                    return [v1, v2, v2 - v1, razao(v2, a2) - razao(v1, a1)];
+                  }),
+                ];
+              }),
+              colunas: [
+                col("Recorte", "texto"),
+                col("Municípios", "int"),
+                ...lista.flatMap((x) => [
+                  col(`${x.c.nome} · 1º t.`, "int"),
+                  col(`${x.c.nome} · 2º t.`, "int"),
+                  col(`Ganho · ${x.c.nome}`, "int"),
+                  col(`Var. % · ${x.c.nome}`, "pct", { casas: 2, barra: true }),
+                ]),
+              ],
+            },
+          ]
+        : []),
       { tipo: "nota", texto: `"Saldo ficou com" é a parte do crescimento somado dos dois finalistas que foi para ${a.c.nome}; é uma estimativa, pois o voto é secreto e não se rastreia quem votou em quem.` },
     ];
   },
