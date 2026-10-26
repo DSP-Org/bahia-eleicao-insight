@@ -1,4 +1,5 @@
 # Tasks
+- [x] Add both-finalists / Lula-only / Flávio-only selection to territory evolution and verify filtered comparisons.
 - [x] Create a Comparativo report group with useful candidate, territory, and office comparison models.
 - [x] Verify the new comparison reports on desktop, mobile, CSV, and PDF.
 - [x] Organize the Bancadas report as complete summaries with candidate names below, preserving CSV.

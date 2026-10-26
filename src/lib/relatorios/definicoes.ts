@@ -1469,14 +1469,18 @@ add({
   grupo: "2º turno · Presidente",
   titulo: "Evolução por território",
   desc: "Crescimento de cada finalista entre os turnos somado por Território de Identidade ou região do IBGE, com participação e votos herdados. Escolha vários recortes para comparar.",
-  controles: ["reg", "escopos"],
+  controles: ["reg", "fin", "escopos"],
   padrao: { reg: "ti" },
   gerar(B, st) {
     const chave: ChaveRegiao = ehRegiao(st.reg) ? st.reg : "ti";
-    const { t1, t2, lista } = finalistas(B);
+    const { t1, t2, lista: ambos } = finalistas(B);
     const { g } = somaTurnos(B, munsDoRecorte(B, null), (mi) => B.muns[mi]?.[chave] ?? "");
-    const [a, b] = lista;
+    const [a, b] = ambos;
     if (!a || !b) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
+    const unico = ambos.find((x) => String(x.c.n) === st.fin);
+    const lista = unico ? [unico] : ambos;
+    const destaque = unico ?? a;
+    const indiceDestaque = ambos.indexOf(destaque);
     const partes = partesEscopo(st.escopos);
     const nomesEscolhidos = new Set(
       partes.flatMap((pt) => {
@@ -1485,14 +1489,20 @@ add({
       }).filter(Boolean),
     );
     const todas = [...g].filter(([n]) => n).map(([nome, o]) => {
-      const p = lista.map((_, k) => [razao(o.v1[k]!, o.s1[E.vv]!), razao(o.v2[k]!, o.s2[E.vv]!)] as const);
-      const ga = o.v2[0]! - o.v1[0]!, gb = o.v2[1]! - o.v1[1]!;
+      const p = ambos.map((_, k) => [razao(o.v1[k] ?? 0, o.s1[E.vv] ?? 0), razao(o.v2[k] ?? 0, o.s2[E.vv] ?? 0)] as const);
+      const ga = (o.v2[indiceDestaque] ?? 0) - (o.v1[indiceDestaque] ?? 0);
+      const outro = indiceDestaque === 0 ? 1 : 0;
+      const gb = (o.v2[outro] ?? 0) - (o.v1[outro] ?? 0);
       return {
         nome,
-        vpA: p[0]![1] - p[0]![0],
+        vpA: (p[indiceDestaque]?.[1] ?? 0) - (p[indiceDestaque]?.[0] ?? 0),
         linha: [
           nome, o.n,
-          ...lista.flatMap((_, k) => [p[k]![0], p[k]![1], p[k]![1] - p[k]![0], o.v2[k]! - o.v1[k]!]),
+          ...lista.flatMap((x) => {
+            const k = ambos.indexOf(x);
+            const p1 = p[k]?.[0] ?? 0, p2 = p[k]?.[1] ?? 0;
+            return [p1, p2, p2 - p1, (o.v2[k] ?? 0) - (o.v1[k] ?? 0)];
+          }),
           (o.s2[E.co] ?? 0) - (o.s1[E.co] ?? 0),
           pctAbst(o.s2) - pctAbst(o.s1),
           (o.s1[E.vv] ?? 0) - o.v1[0]! - o.v1[1]!,
@@ -1511,15 +1521,15 @@ add({
       {
         tipo: "numeros",
         itens: [
-          { rotulo: `Onde ${a.c.nome} mais cresceu`, valor: sinalPP(melhor.pp), sub: melhor.nome },
-          { rotulo: `Onde ${a.c.nome} menos cresceu`, valor: sinalPP(pior.pp), sub: pior.nome },
+          { rotulo: `Onde ${destaque.c.nome} mais cresceu`, valor: sinalPP(melhor.pp), sub: melhor.nome },
+          { rotulo: `Onde ${destaque.c.nome} menos cresceu`, valor: sinalPP(pior.pp), sub: pior.nome },
           { rotulo: "Agrupamento", valor: REGIOES[chave].split(" (")[0]!, sub: `${nf(linhas.length)} grupos` },
         ],
       },
       {
         tipo: "tabela",
-        titulo: `Evolução entre turnos por ${REGIOES[chave]}${partes.length ? ` · ${nomeMulti(B, partes)}` : ""}`,
-        arquivo: arquivo("evolucao-turnos-regiao", chave, nomeMulti(B, partes)),
+        titulo: `Evolução entre turnos por ${REGIOES[chave]}${unico ? ` · ${unico.c.nome}` : ""}${partes.length ? ` · ${nomeMulti(B, partes)}` : ""}`,
+        arquivo: arquivo("evolucao-turnos-regiao", chave, unico?.c.nome, nomeMulti(B, partes)),
         busca: true,
         ordem: [4, true],
         pagina: 40,
@@ -1536,7 +1546,7 @@ add({
           col("Δ comparecimento", "int"),
           col("Δ abstenção (p.p.)", "pct", { casas: 2 }),
           col("Votos dos eliminados (1º t.)", "int"),
-          col(`Saldo ficou com ${a.c.nome}`, "pct", { casas: 1 }),
+          col(`Saldo ficou com ${destaque.c.nome}`, "pct", { casas: 1 }),
         ],
       },
       ...(partes.length > 1
@@ -1544,7 +1554,7 @@ add({
             {
               tipo: "tabela" as const,
               titulo: "Comparação entre os recortes",
-              arquivo: arquivo("evolucao-territorio-recortes", chave),
+              arquivo: arquivo("evolucao-territorio-recortes", chave, unico?.c.nome),
               ordem: [5, false] as [number, boolean],
               linhas: partes.map((pt): Celula[] => {
                 const ss = recorteSet(pt, B);
@@ -1573,7 +1583,7 @@ add({
             },
           ]
         : []),
-      { tipo: "nota", texto: `"Saldo ficou com" é a parte do crescimento somado dos dois finalistas que foi para ${a.c.nome}; é uma estimativa, pois o voto é secreto e não se rastreia quem votou em quem.` },
+      { tipo: "nota", texto: `"Saldo ficou com" é a parte do crescimento somado dos dois finalistas que foi para ${destaque.c.nome}; é uma estimativa, pois o voto é secreto e não se rastreia quem votou em quem.` },
     ];
   },
 });
