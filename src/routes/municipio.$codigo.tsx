@@ -22,7 +22,7 @@ function MunPage() {
   const { data: meta } = useMeta();
   const { data: muns } = useMunicipios();
   const qs = useQueries({
-    queries: CARGOS.map((c) => ({ queryKey: ["mun", c.slug], queryFn: () => fetch(`/data/mun-${c.slug}.json`).then((r) => r.json() as Promise<MunData>), staleTime: Infinity })),
+    queries: CARGOS.map((c) => ({ queryKey: ["mun", c.slug], queryFn: () => fetch(`/data/mun-${c.slug}.json`, { cache: "no-cache" }).then((r) => r.json() as Promise<MunData>), staleTime: Infinity })),
   });
   const mun = muns?.find((m) => m.tse === codigo);
   if (!meta || !muns) return <Loading />;

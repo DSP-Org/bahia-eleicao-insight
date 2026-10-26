@@ -17,7 +17,7 @@ const fetchSnapshot = createIsomorphicFn()
     return response.json();
   })
   .client(async (path: string) => {
-    const response = await fetch(path);
+    const response = await fetch(path, { cache: "no-cache" });
     if (!response.ok) throw new Error("Não foi possível carregar os indicadores.");
     return response.json();
   });

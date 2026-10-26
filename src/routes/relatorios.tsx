@@ -93,7 +93,7 @@ function useBase(): Base | null {
     queries: SLUGS.map((slug) => ({
       queryKey: ["mun", slug],
       queryFn: () =>
-        fetch(`/data/mun-${slug}.json`).then((r) => {
+        fetch(`/data/mun-${slug}.json`, { cache: "no-cache" }).then((r) => {
           if (!r.ok) throw new Error("Falha ao carregar dados");
           return r.json() as Promise<MunData>;
         }),
@@ -104,7 +104,7 @@ function useBase(): Base | null {
   const { data: secoes } = useQuery({
     queryKey: ["secoes"],
     queryFn: () =>
-      fetch("/data/secoes.json").then((r) => (r.ok ? (r.json() as Promise<SecoesData>) : null)),
+      fetch("/data/secoes.json", { cache: "no-cache" }).then((r) => (r.ok ? (r.json() as Promise<SecoesData>) : null)),
     staleTime: Infinity,
     gcTime: Infinity,
   });
