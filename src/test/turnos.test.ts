@@ -43,48 +43,59 @@ describe("Evolução entre turnos (Presidente)", () => {
 });
 
 describe("Evolução por território (relatório)", () => {
-  const rel = RELATORIOS.find((r) => r.id === "turnos-territorio")!;
-  const tabelas = (st: Record<string, string>) =>
-    rel
-      .gerar(base, st as never)
-      .filter((b) => b.tipo === "tabela") as unknown as BlocoTabela[];
+  const rel = RELATORIOS.find((r) => r.id === "turnos-territorio");
+  const tabelas = (st: Record<string, string>) => {
+    if (!rel) throw new Error("Relatório ausente");
+    return rel.gerar(base, st).filter((b) => b.tipo === "tabela") as BlocoTabela[];
+  };
+  const escopos = "ti:Velho Chico|ti:Itaparica";
 
-  it("sem recortes mostra todos os territórios e nenhuma comparação", () => {
-    const [ts] = tabelas({ reg: "ti" });
-    expect(ts.linhas.length).toBe(27);
-    expect(tabelas({ reg: "ti", escopos: "" }).length).toBe(1);
+  it("sem recortes mantém os 27 territórios em todas as leituras", () => {
+    for (const t of tabelas({ reg: "ti" })) expect(t.linhas).toHaveLength(27);
   });
 
-  it("com dois territórios filtra a tabela e cria a comparação", () => {
-    const escopos = "ti:Velho Chico|ti:Itaparica";
-    const partes = partesEscopo(escopos);
-    expect(partes.length).toBe(2);
+  it("mantém os dois territórios escolhidos sem repetir a mesma comparação", () => {
     const ts = tabelas({ reg: "ti", escopos });
-    const principal = ts[0]!;
-    expect(principal.linhas.map((l) => String(l[0])).sort()).toEqual(["Itaparica", "Velho Chico"]);
-    const comp = ts.find((t) => t.titulo.includes("Comparação entre os recortes"))!;
-    expect(comp.linhas.length).toBe(2);
-    expect(comp.linhas.map((l) => recorteNome(partes[comp.linhas.indexOf(l)], base))).toEqual(
-      comp.linhas.map((l) => String(l[0])),
-    );
-    // 16 municípios no Velho Chico + 6 no Itaparica
-    expect(comp.linhas.reduce((s, l) => s + Number(l[1]), 0)).toBe(22);
+    expect(ts).toHaveLength(6);
+    for (const t of ts) expect(t.linhas.map((r) => r[0]).sort()).toEqual(["Itaparica", "Velho Chico"]);
+    expect(partesEscopo(escopos)).toHaveLength(2);
   });
 
-  it.each(["13", "22"])("filtra o candidato %s nas duas tabelas sem mudar seus votos", (fin) => {
-    const escopos = "ti:Velho Chico|ti:Itaparica";
+  it.each(["13", "22"])("preserva votos e percentuais ao selecionar só o finalista %s", (fin) => {
     const completas = tabelas({ reg: "ti", escopos });
     const filtradas = tabelas({ reg: "ti", escopos, fin });
-    const candidato = meta.cargos.find((c) => c.slug === "presidente-2t")?.candidatos.find((c) => String(c.n) === fin);
-    if (!candidato) throw new Error(`Finalista ${fin} ausente`);
-    expect(filtradas).toHaveLength(2);
-    filtradas.forEach((t, i) => {
-      const completa = completas[i];
-      if (!completa) throw new Error("Tabela completa ausente");
-      const indices = completa.colunas.flatMap((c, k) => c.titulo.includes(candidato.nome) && !c.titulo.startsWith("Saldo") ? [k] : []);
-      expect(indices).toHaveLength(4);
-      expect(t.linhas.map((r) => r.slice(2, 6))).toEqual(completa.linhas.map((r) => indices.map((k) => r[k])));
-      expect(t.colunas.length).toBe(completa.colunas.length - 4);
-    });
+    expect(filtradas).toHaveLength(4);
+    const inicio = fin === "13" ? 0 : 2;
+    expect(filtradas[0]?.linhas).toEqual(completas[inicio]?.linhas);
+    expect(filtradas[1]?.linhas).toEqual(completas[inicio + 1]?.linhas);
+    // Faltas e comparecimento não dependem do candidato escolhido.
+    expect(filtradas.slice(-2).map((t) => t.linhas)).toEqual(completas.slice(-2).map((t) => t.linhas));
+  });
+
+  it("separa faltas de votos, usando o eleitorado de cada turno como denominador", () => {
+    const ts = tabelas({ reg: "ti", fin: "13" });
+    const faltas = ts.at(-1);
+    if (!faltas) throw new Error("Faltas ausentes");
+    for (const r of faltas.linhas) {
+      const mis = municipios.flatMap((m, i) => m.ti === r[0] ? [i] : []);
+      const soma = (dados: MunData, indice: number) => mis.reduce((n, i) => {
+        const municipio = municipios[i];
+        const valores = municipio ? dados[municipio.tse] : null;
+        return n + (indice === 2 ? valores?.ab ?? 0 : valores?.el ?? 0);
+      }, 0);
+      const a1 = soma(p1 as MunData, 2), a2 = soma(p2 as MunData, 2);
+      expect(r[1]).toBe(a1);
+      expect(r[2]).toBe(a2);
+      expect(r[3]).toBe(a2 - a1);
+      expect(r[4]).toBeCloseTo(100 * a1 / soma(p1 as MunData, 0));
+      expect(r[5]).toBeCloseTo(100 * a2 / soma(p2 as MunData, 0));
+    }
+  });
+
+  it("preserva comparação específica quando os recortes não são os próprios grupos", () => {
+    const ts = tabelas({ reg: "ti", escopos: "ti:Velho Chico|mun:38490", fin: "13" });
+    expect(ts).toHaveLength(6);
+    const partes = partesEscopo("ti:Velho Chico|mun:38490");
+    expect(ts[2]?.linhas.map((r) => r[0])).toEqual(partes.map((pt) => recorteNome(pt, base)));
   });
 });
