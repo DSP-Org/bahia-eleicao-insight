@@ -1468,123 +1468,83 @@ add({
   id: "turnos-territorio",
   grupo: "2º turno · Presidente",
   titulo: "Evolução por território",
-  desc: "Crescimento de cada finalista entre os turnos somado por Território de Identidade ou região do IBGE, com participação e votos herdados. Escolha vários recortes para comparar.",
+  desc: "Evolução dos votos e da participação de cada finalista por território ou região. Comparecimento e faltas às urnas aparecem separados dos candidatos.",
   controles: ["reg", "fin", "escopos"],
   padrao: { reg: "ti" },
   gerar(B, st) {
     const chave: ChaveRegiao = ehRegiao(st.reg) ? st.reg : "ti";
     const { t1, t2, lista: ambos } = finalistas(B);
-    const { g } = somaTurnos(B, munsDoRecorte(B, null), (mi) => B.muns[mi]?.[chave] ?? "");
-    const [a, b] = ambos;
-    if (!a || !b) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
+    if (ambos.length < 2) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
     const unico = ambos.find((x) => String(x.c.n) === st.fin);
     const lista = unico ? [unico] : ambos;
-    const destaque = unico ?? a;
-    const indiceDestaque = ambos.indexOf(destaque);
     const partes = partesEscopo(st.escopos);
-    const nomesEscolhidos = new Set(
-      partes.flatMap((pt) => {
-        const ss = recorteSet(pt, B);
-        return ss ? munsDoRecorte(B, ss).map((mi) => B.muns[mi]?.[chave] ?? "") : [];
-      }).filter(Boolean),
-    );
-    const todas = [...g].filter(([n]) => n).map(([nome, o]) => {
-      const p = ambos.map((_, k) => [razao(o.v1[k] ?? 0, o.s1[E.vv] ?? 0), razao(o.v2[k] ?? 0, o.s2[E.vv] ?? 0)] as const);
-      const ga = (o.v2[indiceDestaque] ?? 0) - (o.v1[indiceDestaque] ?? 0);
-      const outro = indiceDestaque === 0 ? 1 : 0;
-      const gb = (o.v2[outro] ?? 0) - (o.v1[outro] ?? 0);
-      return {
-        nome,
-        vpA: (p[indiceDestaque]?.[1] ?? 0) - (p[indiceDestaque]?.[0] ?? 0),
-        linha: [
-          nome, o.n,
-          ...lista.flatMap((x) => {
-            const k = ambos.indexOf(x);
-            const p1 = p[k]?.[0] ?? 0, p2 = p[k]?.[1] ?? 0;
-            return [p1, p2, p2 - p1, (o.v2[k] ?? 0) - (o.v1[k] ?? 0)];
+    const { g } = somaTurnos(B, munsDoRecorte(B, null), (mi) => B.muns[mi]?.[chave] ?? "");
+    const nomesEscolhidos = new Set(partes.flatMap((pt) => {
+      const ss = recorteSet(pt, B);
+      return ss ? munsDoRecorte(B, ss).map((mi) => B.muns[mi]?.[chave] ?? "") : [];
+    }).filter(Boolean));
+    const grupos = [...g].filter(([nome]) => nome && (!partes.length || nomesEscolhidos.has(nome)));
+    const rotulo = REGIOES[chave].split(" (")[0] ?? REGIOES[chave];
+    const contexto = nomeMulti(B, partes);
+    const blocos: Bloco[] = [{ tipo: "numeros", itens: [
+      { rotulo: "Agrupamento", valor: rotulo, sub: `${nf(grupos.length)} grupos · ${nf(grupos.reduce((n, [, o]) => n + o.n, 0))} municípios` },
+      ...lista.map((x) => {
+        const k = ambos.indexOf(x);
+        const ganho = grupos.reduce((n, [, o]) => n + (o.v2[k] ?? 0) - (o.v1[k] ?? 0), 0);
+        return { rotulo: `Saldo de votos · ${x.c.nome}`, valor: sinal(ganho), sub: "2º turno menos 1º turno · grupos exibidos" };
+      }),
+    ] }];
+    // Mesmos grupos e denominadores em todas as leituras; tabelas curtas não
+    // misturam votos, pontos percentuais e participação do eleitorado.
+    const adicionarCandidatos = (dados: typeof grupos, prefixo: string, recortes = false) => {
+      for (const x of lista) {
+        const k = ambos.indexOf(x);
+        blocos.push({
+          tipo: "tabela", titulo: `${prefixo} · ${x.c.nome} · Votos`,
+          arquivo: arquivo("evolucao-territorio", recortes ? "recortes" : chave, x.c.nome, "votos", contexto),
+          busca: true, ordem: [3, true], pagina: 40,
+          colunas: [col(recortes ? "Recorte" : rotulo, "texto"), col("1º turno", "int"), col("2º turno", "int"), col("Saldo de votos", "dif")],
+          linhas: dados.map(([nome, o]) => [nome, o.v1[k] ?? 0, o.v2[k] ?? 0, (o.v2[k] ?? 0) - (o.v1[k] ?? 0)]),
+        }, {
+          tipo: "tabela", titulo: `${prefixo} · ${x.c.nome} · Percentual dos votos válidos`,
+          arquivo: arquivo("evolucao-territorio", recortes ? "recortes" : chave, x.c.nome, "percentuais", contexto),
+          busca: true, ordem: [3, true], pagina: 40,
+          colunas: [col(recortes ? "Recorte" : rotulo, "texto"), col("1º turno", "pct", { casas: 2 }), col("2º turno", "pct", { casas: 2 }), col("Variação (p.p.)", "corr")],
+          linhas: dados.map(([nome, o]) => {
+            const p1 = razao(o.v1[k] ?? 0, o.s1[E.vv] ?? 0), p2 = razao(o.v2[k] ?? 0, o.s2[E.vv] ?? 0);
+            return [nome, p1, p2, p2 - p1];
           }),
-          (o.s2[E.co] ?? 0) - (o.s1[E.co] ?? 0),
-          pctAbst(o.s2) - pctAbst(o.s1),
-          (o.s1[E.vv] ?? 0) - o.v1[0]! - o.v1[1]!,
-          parcela(ga, gb),
-        ] as Celula[],
-      };
-    });
-    const visiveis = partes.length ? todas.filter((r) => nomesEscolhidos.has(r.nome)) : todas;
-    const linhas: Celula[][] = visiveis.map((r) => r.linha);
-    let melhor = { nome: "", pp: -Infinity }, pior = { nome: "", pp: Infinity };
-    for (const r of visiveis) {
-      if (r.vpA > melhor.pp) melhor = { nome: r.nome, pp: r.vpA };
-      if (r.vpA < pior.pp) pior = { nome: r.nome, pp: r.vpA };
+        });
+      }
+    };
+    adicionarCandidatos(grupos, "Evolução");
+    blocos.push({ tipo: "nota", texto: "Saldo de votos: valor positivo indica ganho; negativo indica perda. Os percentuais usam os votos válidos do respectivo turno; a variação é em pontos percentuais (p.p.), não em votos." });
+    // Recortes do próprio agrupamento já são as linhas acima: não duplicar.
+    if (partes.length > 1 && partes.some((pt) => !pt.startsWith(`${chave}:`))) {
+      const recortes: typeof grupos = partes.map((pt) => {
+        const ss = recorteSet(pt, B);
+        return [recorteNome(pt, B), {
+          n: munsDoRecorte(B, ss).length, s1: statsRecorte(t1, ss), s2: statsRecorte(t2, ss),
+          v1: ambos.map((x) => somaRecorte(t1.votos[x.i1] ?? [], ss)),
+          v2: ambos.map((x) => somaRecorte(t2.votos[x.i2] ?? [], ss)),
+        }];
+      });
+      adicionarCandidatos(recortes, "Comparação entre os recortes", true);
     }
-    return [
-      {
-        tipo: "numeros",
-        itens: [
-          { rotulo: `Onde ${destaque.c.nome} mais cresceu`, valor: sinalPP(melhor.pp), sub: melhor.nome },
-          { rotulo: `Onde ${destaque.c.nome} menos cresceu`, valor: sinalPP(pior.pp), sub: pior.nome },
-          { rotulo: "Agrupamento", valor: REGIOES[chave].split(" (")[0]!, sub: `${nf(linhas.length)} grupos` },
-        ],
-      },
-      {
-        tipo: "tabela",
-        titulo: `Evolução entre turnos por ${REGIOES[chave]}${unico ? ` · ${unico.c.nome}` : ""}${partes.length ? ` · ${nomeMulti(B, partes)}` : ""}`,
-        arquivo: arquivo("evolucao-turnos-regiao", chave, unico?.c.nome, nomeMulti(B, partes)),
-        busca: true,
-        ordem: [4, true],
-        pagina: 40,
-        linhas,
-        colunas: [
-          col(REGIOES[chave].split(" (")[0]!, "texto"),
-          col("Municípios", "int"),
-          ...lista.flatMap((x) => [
-            col(`% ${x.c.nome} · 1º t.`, "pct", { casas: 2 }),
-            col(`% ${x.c.nome} · 2º t.`, "pct", { casas: 2 }),
-            col(`Var. p.p. · ${x.c.nome}`, "pct", { casas: 2, barra: true }),
-            col(`Ganho · ${x.c.nome}`, "int"),
-          ]),
-          col("Δ comparecimento", "int"),
-          col("Δ abstenção (p.p.)", "pct", { casas: 2 }),
-          col("Votos dos eliminados (1º t.)", "int"),
-          col(`Saldo ficou com ${destaque.c.nome}`, "pct", { casas: 1 }),
-        ],
-      },
-      ...(partes.length > 1
-        ? [
-            {
-              tipo: "tabela" as const,
-              titulo: "Comparação entre os recortes",
-              arquivo: arquivo("evolucao-territorio-recortes", chave, unico?.c.nome),
-              ordem: [5, false] as [number, boolean],
-              linhas: partes.map((pt): Celula[] => {
-                const ss = recorteSet(pt, B);
-                const a1 = statsRecorte(t1, ss)[E.vv] ?? 0;
-                const a2 = statsRecorte(t2, ss)[E.vv] ?? 0;
-                return [
-                  recorteNome(pt, B),
-                  munsDoRecorte(B, ss).length,
-                  ...lista.flatMap((x) => {
-                    const v1 = somaRecorte(t1.votos[x.i1] ?? [], ss);
-                    const v2 = somaRecorte(t2.votos[x.i2] ?? [], ss);
-                    return [v1, v2, v2 - v1, razao(v2, a2) - razao(v1, a1)];
-                  }),
-                ];
-              }),
-              colunas: [
-                col("Recorte", "texto"),
-                col("Municípios", "int"),
-                ...lista.flatMap((x) => [
-                  col(`${x.c.nome} · 1º t.`, "int"),
-                  col(`${x.c.nome} · 2º t.`, "int"),
-                  col(`Ganho · ${x.c.nome}`, "int"),
-                  col(`Var. % · ${x.c.nome}`, "pct", { casas: 2, barra: true }),
-                ]),
-              ],
-            },
-          ]
-        : []),
-      { tipo: "nota", texto: `"Saldo ficou com" é a parte do crescimento somado dos dois finalistas que foi para ${destaque.c.nome}; é uma estimativa, pois o voto é secreto e não se rastreia quem votou em quem.` },
-    ];
+    blocos.push({
+      tipo: "tabela", titulo: "Comparecimento às urnas · Eleitores que votaram",
+      arquivo: arquivo("evolucao-territorio-comparecimento", chave, contexto),
+      busca: true, ordem: [3, true], pagina: 40,
+      colunas: [col(rotulo, "texto"), col("1º turno", "int"), col("2º turno", "int"), col("Saldo de comparecimento", "dif")],
+      linhas: grupos.map(([nome, o]) => [nome, o.s1[E.co] ?? 0, o.s2[E.co] ?? 0, (o.s2[E.co] ?? 0) - (o.s1[E.co] ?? 0)]),
+    }, {
+      tipo: "tabela", titulo: "Faltas às urnas · Abstenção",
+      arquivo: arquivo("evolucao-territorio-abstencao", chave, contexto),
+      busca: true, ordem: [3, true], pagina: 40,
+      colunas: [col(rotulo, "texto"), col("Faltas · 1º turno", "int"), col("Faltas · 2º turno", "int"), col("Saldo de faltas", "dif"), col("% faltas · 1º turno", "pct", { casas: 2 }), col("% faltas · 2º turno", "pct", { casas: 2 })],
+      linhas: grupos.map(([nome, o]) => [nome, o.s1[E.ab] ?? 0, o.s2[E.ab] ?? 0, (o.s2[E.ab] ?? 0) - (o.s1[E.ab] ?? 0), pctAbst(o.s1), pctAbst(o.s2)]),
+    }, { tipo: "nota", texto: "Faltas às urnas (abstenção) são eleitores que não compareceram. Saldo positivo significa mais faltas no 2º turno; negativo, menos faltas. O percentual é calculado sobre o eleitorado de cada turno, não sobre os votos válidos. Brancos e nulos são votos de quem compareceu, não faltas." });
+    return blocos;
   },
 });
 
