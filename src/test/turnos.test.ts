@@ -78,7 +78,11 @@ describe("Evolução por território (relatório)", () => {
     if (!faltas) throw new Error("Faltas ausentes");
     for (const r of faltas.linhas) {
       const mis = municipios.flatMap((m, i) => m.ti === r[0] ? [i] : []);
-      const soma = (dados: MunData, indice: number) => mis.reduce((n, i) => n + (dados.stats[i]?.[indice] ?? 0), 0);
+      const soma = (dados: MunData, indice: number) => mis.reduce((n, i) => {
+        const municipio = municipios[i];
+        const valores = municipio ? dados[municipio.tse] : null;
+        return n + (indice === 2 ? valores?.ab ?? 0 : valores?.el ?? 0);
+      }, 0);
       const a1 = soma(p1 as MunData, 2), a2 = soma(p2 as MunData, 2);
       expect(r[1]).toBe(a1);
       expect(r[2]).toBe(a2);
