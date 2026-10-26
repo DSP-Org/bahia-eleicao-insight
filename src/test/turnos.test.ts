@@ -70,4 +70,21 @@ describe("Evolução por território (relatório)", () => {
     // 16 municípios no Velho Chico + 6 no Itaparica
     expect(comp.linhas.reduce((s, l) => s + Number(l[1]), 0)).toBe(22);
   });
+
+  it.each(["13", "22"])("filtra o candidato %s nas duas tabelas sem mudar seus votos", (fin) => {
+    const escopos = "ti:Velho Chico|ti:Itaparica";
+    const completas = tabelas({ reg: "ti", escopos });
+    const filtradas = tabelas({ reg: "ti", escopos, fin });
+    const candidato = meta.cargos.find((c) => c.slug === "presidente-2t")?.candidatos.find((c) => String(c.n) === fin);
+    if (!candidato) throw new Error(`Finalista ${fin} ausente`);
+    expect(filtradas).toHaveLength(2);
+    filtradas.forEach((t, i) => {
+      const completa = completas[i];
+      if (!completa) throw new Error("Tabela completa ausente");
+      const indices = completa.colunas.flatMap((c, k) => c.titulo.includes(candidato.nome) && !c.titulo.startsWith("Saldo") ? [k] : []);
+      expect(indices).toHaveLength(4);
+      expect(t.linhas.map((r) => r.slice(2, 6))).toEqual(completa.linhas.map((r) => indices.map((k) => r[k])));
+      expect(t.colunas.length).toBe(completa.colunas.length - 4);
+    });
+  });
 });
