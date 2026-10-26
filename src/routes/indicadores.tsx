@@ -100,7 +100,7 @@ function Indicadores() {
     const base = criarIndicadores(cargo, munsRecorte, dados[cargo.slug] ?? {}, candidato?.id ?? "", tipoRecorte);
     const t1 = meta.cargos.find((c) => c.slug === "presidente");
     // No 2º turno de Presidente, a evolução frente ao 1º turno vem primeiro.
-    return slug === "presidente-2t" && t1 && cargoBase ? [criarEvolucaoTurnos(t1, cargoBase, munsRecorte, dados.presidente ?? {}, dados["presidente-2t"] ?? {}), ...base] : base;
+    return slug === "presidente-2t" && t1 && cargoBase ? [criarEvolucaoTurnos(t1, cargoBase, munsRecorte, dados["presidente"] ?? {}, dados["presidente-2t"] ?? {}), ...base] : base;
   }, [cargo, cargoBase, meta, slug, munsRecorte, dados, candidato, tipoRecorte]);
   const totalCards = secoes.reduce((t, s) => t + s.cards.length, 0);
   // Text search only helps when there are many cards to scan.
