@@ -82,7 +82,7 @@ export function criarIndicadores(cargo: Cargo, municipios: Municipio[], dados: M
       card("Candidatos com votos", candidatos.filter((c) => c.votos > 0).length, `Ao menos um voto ${onde}`),
       card("Candidatos sem votos", candidatos.filter((c) => c.votos === 0).length, "Zero votos no resultado"),
       card("Partidos listados", cargo.partidos.length, "Partidos presentes neste cargo"),
-      card("Vagas em disputa", cargo.vagas, cargo.slug === "presidente" ? "Disputa nacional; votos exibidos da BA" : "Vagas referentes à Bahia" + (noEstado ? "" : " (estado inteiro)")),
+      card("Vagas em disputa", cargo.vagas, cargo.slug.startsWith("presidente") ? "Disputa nacional; votos exibidos da BA" : "Vagas referentes à Bahia" + (noEstado ? "" : " (estado inteiro)")),
       card("Eleitos oficiais", oficiais.length, noEstado ? "Somente situação oficial, sem projeções" : "Resultado estadual, não do recorte"),
       ...(projetados.length ? [card("Eleitos por projeção", projetados.length, "Estimativa; não é confirmação do TSE")] : []),
       ...(proporcionais ? [card("Candidatos por vaga", (candidatos.length / cargo.vagas).toLocaleString("pt-BR", { maximumFractionDigits: 1 }), "Candidatos listados ÷ vagas")] : []),
