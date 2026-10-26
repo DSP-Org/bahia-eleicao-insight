@@ -4,6 +4,7 @@ import { slugify } from "@/lib/eleicoes";
 
 export const SLUGS = [
   "presidente",
+  "presidente-2t",
   "governador",
   "senador",
   "deputado-federal",
@@ -13,6 +14,7 @@ export type Slug = (typeof SLUGS)[number];
 export const PROPORCIONAIS: readonly Slug[] = ["deputado-federal", "deputado-estadual"];
 export const NOME_CURTO: Record<Slug, string> = {
   presidente: "Presidente",
+  "presidente-2t": "Presidente 2º t.",
   governador: "Governador",
   senador: "Senador",
   "deputado-federal": "Dep. Federal",

@@ -43,6 +43,7 @@ export const useGeo = () => useQuery({ queryKey: ["geo"], queryFn: j<GeoJSON.Fea
 
 export const CARGOS = [
   { slug: "presidente", nome: "Presidente" },
+  { slug: "presidente-2t", nome: "Presidente – 2º turno" },
   { slug: "governador", nome: "Governador" },
   { slug: "senador", nome: "Senador" },
   { slug: "deputado-federal", nome: "Deputado Federal" },
