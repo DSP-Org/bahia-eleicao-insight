@@ -1404,7 +1404,7 @@ const pctBN = (s: number[]) => razao((s[E.vb] ?? 0) + (s[E.vn] ?? 0), s[E.tv] ??
 const sinal = (n: number) => `${n >= 0 ? "+" : ""}${nf(n)}`;
 const sinalPP = (n: number) => `${n >= 0 ? "+" : ""}${n.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} p.p.`;
 // Parcela do saldo positivo dos dois finalistas que ficou com cada um (null quando nenhum cresceu).
-const parcela = (ga: number, gb: number) => { const t = Math.max(ga, 0) + Math.max(gb, 0); return t > 0 ? Math.max(ga, 0) / t : null; };
+const parcela = (ga: number, gb: number) => { const t = Math.max(ga, 0) + Math.max(gb, 0); return t > 0 ? (Math.max(ga, 0) / t) * 100 : null; };
 
 add({
   id: "turnos-territorio",
@@ -1540,7 +1540,7 @@ add({
       const da = o.v2[0]! - o.v1[0]!, db = o.v2[1]! - o.v1[1]!;
       elim += e; ga += da; gb += db;
       const p = parcela(da, db);
-      if (p != null && p < 0.5) maioriaB++;
+      if (p != null && p < 50) maioriaB++;
       return [vMun(B, mi), B.muns[mi]?.ti ?? "", e, razao(e, o.s1[E.vv] ?? 0), da, db, (o.s2[E.vv] ?? 0) - (o.s1[E.vv] ?? 0), p];
     });
     return [
@@ -1549,7 +1549,7 @@ add({
         itens: [
           { rotulo: "Votos dos eliminados no 1º turno", valor: nf(elim), sub: recorteNome(st.escopo, B) },
           { rotulo: `Ganho · ${a.c.nome}`, valor: sinal(ga), sub: fmtPct(parcela(ga, gb) ?? 0, 1) + " do crescimento" },
-          { rotulo: `Ganho · ${b.c.nome}`, valor: sinal(gb), sub: fmtPct(1 - (parcela(ga, gb) ?? 1), 1) + " do crescimento" },
+          { rotulo: `Ganho · ${b.c.nome}`, valor: sinal(gb), sub: fmtPct(100 - (parcela(ga, gb) ?? 100), 1) + " do crescimento" },
           { rotulo: `Cidades onde ${b.c.nome} ficou com a maior parte`, valor: nf(maioriaB), sub: `de ${nf(linhas.length)}` },
         ],
       },
