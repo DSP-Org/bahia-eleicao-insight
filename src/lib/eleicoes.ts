@@ -33,7 +33,8 @@ export type MunRes = {
 };
 export type MunData = Record<string, MunRes | null>;
 
-const j = <T,>(u: string) => () => fetch(u).then((r) => { if (!r.ok) throw new Error("Falha ao carregar dados"); return r.json() as Promise<T>; });
+// "no-cache" revalida com o servidor: depois de atualizar public/data, ninguém fica com um meta.json antigo.
+const j = <T,>(u: string) => () => fetch(u, { cache: "no-cache" }).then((r) => { if (!r.ok) throw new Error("Falha ao carregar dados"); return r.json() as Promise<T>; });
 const opts = { staleTime: Infinity, gcTime: Infinity } as const;
 
 export const useMeta = () => useQuery({ queryKey: ["meta"], queryFn: j<Meta>("/data/meta.json"), ...opts });
