@@ -1383,6 +1383,197 @@ add({
   },
 });
 
+// Soma estatísticas e votos dos finalistas por grupo (região ou município) nos dois turnos.
+function somaTurnos(B: Base, mis: number[], chaveDe: (mi: number) => string) {
+  const { t1, t2, lista } = finalistas(B);
+  const mapas = lista.map((x) => ({ m1: mapaVotos(t1.votos[x.i1] ?? []), m2: mapaVotos(t2.votos[x.i2] ?? []) }));
+  const g = new Map<string, { n: number; s1: number[]; s2: number[]; v1: number[]; v2: number[] }>();
+  for (const mi of mis) {
+    const k = chaveDe(mi);
+    let o = g.get(k);
+    if (!o) g.set(k, (o = { n: 0, s1: Array(8).fill(0), s2: Array(8).fill(0), v1: lista.map(() => 0), v2: lista.map(() => 0) }));
+    o.n++;
+    (t1.stats[mi] ?? []).forEach((v, j) => (o!.s1[j] += v ?? 0));
+    (t2.stats[mi] ?? []).forEach((v, j) => (o!.s2[j] += v ?? 0));
+    mapas.forEach((m, j) => { o!.v1[j] += m.m1.get(mi) ?? 0; o!.v2[j] += m.m2.get(mi) ?? 0; });
+  }
+  return { lista, g };
+}
+const pctAbst = (s: number[]) => razao(s[E.ab] ?? 0, s[E.el] ?? 0);
+const pctBN = (s: number[]) => razao((s[E.vb] ?? 0) + (s[E.vn] ?? 0), s[E.tv] ?? 0);
+const sinal = (n: number) => `${n >= 0 ? "+" : ""}${nf(n)}`;
+const sinalPP = (n: number) => `${n >= 0 ? "+" : ""}${n.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} p.p.`;
+// Parcela do saldo positivo dos dois finalistas que ficou com cada um (null quando nenhum cresceu).
+const parcela = (ga: number, gb: number) => { const t = Math.max(ga, 0) + Math.max(gb, 0); return t > 0 ? (Math.max(ga, 0) / t) * 100 : null; };
+
+add({
+  id: "turnos-territorio",
+  grupo: "2º turno · Presidente",
+  titulo: "Evolução por território",
+  desc: "Crescimento de cada finalista entre os turnos somado por Território de Identidade ou região do IBGE, com participação e votos herdados.",
+  controles: ["reg"],
+  padrao: { reg: "ti" },
+  gerar(B, st) {
+    const chave: ChaveRegiao = ehRegiao(st.reg) ? st.reg : "ti";
+    const { lista, g } = somaTurnos(B, munsDoRecorte(B, null), (mi) => B.muns[mi]?.[chave] ?? "");
+    const [a, b] = lista;
+    if (!a || !b) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
+    let melhor = { nome: "", pp: -Infinity }, pior = { nome: "", pp: Infinity };
+    const linhas: Celula[][] = [...g].filter(([n]) => n).map(([nome, o]) => {
+      const p = lista.map((_, k) => [razao(o.v1[k]!, o.s1[E.vv]!), razao(o.v2[k]!, o.s2[E.vv]!)] as const);
+      const vpA = p[0]![1] - p[0]![0];
+      if (vpA > melhor.pp) melhor = { nome, pp: vpA };
+      if (vpA < pior.pp) pior = { nome, pp: vpA };
+      const ga = o.v2[0]! - o.v1[0]!, gb = o.v2[1]! - o.v1[1]!;
+      return [
+        nome, o.n,
+        ...lista.flatMap((_, k) => [p[k]![0], p[k]![1], p[k]![1] - p[k]![0], o.v2[k]! - o.v1[k]!]),
+        (o.s2[E.co] ?? 0) - (o.s1[E.co] ?? 0),
+        pctAbst(o.s2) - pctAbst(o.s1),
+        (o.s1[E.vv] ?? 0) - o.v1[0]! - o.v1[1]!,
+        parcela(ga, gb),
+      ];
+    });
+    return [
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: `Onde ${a.c.nome} mais cresceu`, valor: sinalPP(melhor.pp), sub: melhor.nome },
+          { rotulo: `Onde ${a.c.nome} menos cresceu`, valor: sinalPP(pior.pp), sub: pior.nome },
+          { rotulo: "Agrupamento", valor: REGIOES[chave].split(" (")[0]!, sub: `${nf(linhas.length)} grupos` },
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `Evolução entre turnos por ${REGIOES[chave]}`,
+        arquivo: arquivo("evolucao-turnos-regiao", chave),
+        busca: true,
+        ordem: [4, true],
+        pagina: 40,
+        linhas,
+        colunas: [
+          col(REGIOES[chave].split(" (")[0]!, "texto"),
+          col("Municípios", "int"),
+          ...lista.flatMap((x) => [
+            col(`% ${x.c.nome} · 1º t.`, "pct", { casas: 2 }),
+            col(`% ${x.c.nome} · 2º t.`, "pct", { casas: 2 }),
+            col(`Var. p.p. · ${x.c.nome}`, "pct", { casas: 2, barra: true }),
+            col(`Ganho · ${x.c.nome}`, "int"),
+          ]),
+          col("Δ comparecimento", "int"),
+          col("Δ abstenção (p.p.)", "pct", { casas: 2 }),
+          col("Votos dos eliminados (1º t.)", "int"),
+          col(`Saldo ficou com ${a.c.nome}`, "pct", { casas: 1 }),
+        ],
+      },
+      { tipo: "nota", texto: `"Saldo ficou com" é a parte do crescimento somado dos dois finalistas que foi para ${a.c.nome}; é uma estimativa, pois o voto é secreto e não se rastreia quem votou em quem.` },
+    ];
+  },
+});
+
+add({
+  id: "turnos-participacao",
+  grupo: "2º turno · Presidente",
+  titulo: "Comparecimento, abstenção e brancos/nulos por turno",
+  desc: "Como a participação mudou do 1º para o 2º turno em cada município: comparecimento, abstenção e votos brancos e nulos.",
+  controles: ["escopo"],
+  padrao: { escopo: "ba" },
+  gerar(B, st) {
+    const set = recorteSet(st.escopo, B);
+    const { lista, g } = somaTurnos(B, munsDoRecorte(B, set), (mi) => String(mi));
+    if (lista.length < 2) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
+    const t = { s1: Array(8).fill(0) as number[], s2: Array(8).fill(0) as number[] };
+    let subiu = 0;
+    const linhas: Celula[][] = [...g].map(([k, o]) => {
+      const mi = Number(k);
+      o.s1.forEach((v, j) => (t.s1[j] += v)); o.s2.forEach((v, j) => (t.s2[j] += v));
+      const dc = (o.s2[E.co] ?? 0) - (o.s1[E.co] ?? 0);
+      if (dc > 0) subiu++;
+      return [vMun(B, mi), B.muns[mi]?.ti ?? "", o.s1[E.co] ?? 0, o.s2[E.co] ?? 0, dc, pctAbst(o.s1), pctAbst(o.s2), pctAbst(o.s2) - pctAbst(o.s1), pctBN(o.s1), pctBN(o.s2), pctBN(o.s2) - pctBN(o.s1)];
+    });
+    return [
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: "Comparecimento · 2º turno", valor: nf(t.s2[E.co] ?? 0), sub: `${sinal((t.s2[E.co] ?? 0) - (t.s1[E.co] ?? 0))} sobre o 1º turno` },
+          { rotulo: "Abstenção · 2º turno", valor: fmtPct(pctAbst(t.s2), 2), sub: `1º turno: ${fmtPct(pctAbst(t.s1), 2)}` },
+          { rotulo: "Brancos + nulos · 2º turno", valor: fmtPct(pctBN(t.s2), 2), sub: `1º turno: ${fmtPct(pctBN(t.s1), 2)}` },
+          { rotulo: "Cidades com mais eleitores votando", valor: nf(subiu), sub: `de ${nf(linhas.length)}` },
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `Participação por turno · ${recorteNome(st.escopo, B)}`,
+        arquivo: arquivo("participacao-turnos", recorteNome(st.escopo, B)),
+        busca: true,
+        ordem: [7, false],
+        pagina: 40,
+        linhas,
+        colunas: [
+          col("Município", "mun"), col("Território", "texto"),
+          col("Comparec. 1º t.", "int"), col("Comparec. 2º t.", "int"), col("Δ comparec.", "int"),
+          col("Abstenção 1º t.", "pct", { casas: 2 }), col("Abstenção 2º t.", "pct", { casas: 2 }), col("Δ abstenção (p.p.)", "pct", { casas: 2, barra: true }),
+          col("Brancos+nulos 1º t.", "pct", { casas: 2 }), col("Brancos+nulos 2º t.", "pct", { casas: 2 }), col("Δ brancos+nulos (p.p.)", "pct", { casas: 2 }),
+        ],
+      },
+      { tipo: "nota", texto: "Abstenção sobre o eleitorado; brancos e nulos sobre o total de votos de cada turno." },
+    ];
+  },
+});
+
+add({
+  id: "turnos-herdados",
+  grupo: "2º turno · Presidente",
+  titulo: "Votos herdados dos eliminados",
+  desc: "Quantos votos foram para os candidatos eliminados no 1º turno e quanto do crescimento no 2º turno ficou com cada finalista, cidade a cidade.",
+  controles: ["escopo"],
+  padrao: { escopo: "ba" },
+  gerar(B, st) {
+    const set = recorteSet(st.escopo, B);
+    const { lista, g } = somaTurnos(B, munsDoRecorte(B, set), (mi) => String(mi));
+    const [a, b] = lista;
+    if (!a || !b) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
+    let elim = 0, ga = 0, gb = 0, maioriaB = 0;
+    const linhas: Celula[][] = [...g].map(([k, o]) => {
+      const mi = Number(k);
+      const e = (o.s1[E.vv] ?? 0) - o.v1[0]! - o.v1[1]!;
+      const da = o.v2[0]! - o.v1[0]!, db = o.v2[1]! - o.v1[1]!;
+      elim += e; ga += da; gb += db;
+      const p = parcela(da, db);
+      if (p != null && p < 50) maioriaB++;
+      return [vMun(B, mi), B.muns[mi]?.ti ?? "", e, razao(e, o.s1[E.vv] ?? 0), da, db, (o.s2[E.vv] ?? 0) - (o.s1[E.vv] ?? 0), p];
+    });
+    return [
+      {
+        tipo: "numeros",
+        itens: [
+          { rotulo: "Votos dos eliminados no 1º turno", valor: nf(elim), sub: recorteNome(st.escopo, B) },
+          { rotulo: `Ganho · ${a.c.nome}`, valor: sinal(ga), sub: fmtPct(parcela(ga, gb) ?? 0, 1) + " do crescimento" },
+          { rotulo: `Ganho · ${b.c.nome}`, valor: sinal(gb), sub: fmtPct(100 - (parcela(ga, gb) ?? 100), 1) + " do crescimento" },
+          { rotulo: `Cidades onde ${b.c.nome} ficou com a maior parte`, valor: nf(maioriaB), sub: `de ${nf(linhas.length)}` },
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `Votos herdados · ${recorteNome(st.escopo, B)}`,
+        arquivo: arquivo("herdados-turnos", recorteNome(st.escopo, B)),
+        busca: true,
+        ordem: [2, true],
+        pagina: 40,
+        linhas,
+        colunas: [
+          col("Município", "mun"), col("Território", "texto"),
+          col("Votos eliminados (1º t.)", "int"), col("% dos válidos 1º t.", "pct", { casas: 1 }),
+          col(`Ganho · ${a.c.nome}`, "int"), col(`Ganho · ${b.c.nome}`, "int"),
+          col("Δ votos válidos", "int"),
+          col(`Saldo ficou com ${a.c.nome}`, "pct", { casas: 1, barra: true }),
+        ],
+      },
+      { tipo: "nota", texto: "Estimativa: o voto é secreto, então o ganho de cada finalista mistura votos de eliminados, novos votantes e trocas. Serve para comparar tendências entre cidades." },
+    ];
+  },
+});
+
 add({
   id: "partido-casas",
   grupo: "COMPARATIVO",
