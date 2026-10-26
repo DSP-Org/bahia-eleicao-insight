@@ -23,6 +23,7 @@ import {
   RELATORIOS,
   baixarDados,
   finalistas,
+  partesEscopo,
   candidatoPadrao,
   municipioPadrao,
   opcoesPartido,
@@ -53,6 +54,7 @@ const CHAVES = [
   "loc",
   "agl",
   "fin",
+  "escopos",
 ] as const;
 
 export const Route = createFileRoute("/relatorios")({
@@ -174,7 +176,7 @@ function Relatorios() {
   const trocar = (id: string) => {
     // ao mudar de relatório, mantém cargo, recorte, candidato e município
     const n: Estado = { r: id };
-    for (const k of ["cargo", "escopo", "cand", "cand2", "mun", "muns", "loc", "cands"] as const) {
+    for (const k of ["cargo", "escopo", "escopos", "cand", "cand2", "mun", "muns", "loc", "cands"] as const) {
       const v = st[k];
       if (v) n[k] = v;
     }
@@ -189,6 +191,9 @@ function Relatorios() {
         ? B.cargos[ef.cargo].cargo.nome
         : "",
       rel.controles.includes("escopo") ? recorteNome(ef.escopo, B) : "",
+      rel.controles.includes("escopos")
+        ? partesEscopo(ef.escopos).map((p) => recorteNome(p, B)).join(" + ") || "Bahia inteira"
+        : "",
       rel.controles.includes("cand") ? (B.candPorId.get(ef.cand ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("cand2") ? (B.candPorId.get(ef.cand2 ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("mun") ? (B.muns[B.porTse.get(ef.mun ?? "") ?? -1]?.nome ?? "") : "",
@@ -411,6 +416,50 @@ function Controle({
             >
               Voltar para Bahia inteira
             </button>
+          )}
+        </Campo>
+      );
+    }
+    case "escopos": {
+      const escolhidos = partesEscopo(st.escopos);
+      const salvar = (l: string[]) => definir("escopos", l.join("|"));
+      const itens = [
+        ...(Object.keys(REGIOES) as (keyof typeof REGIOES)[]).flatMap((k) =>
+          nomesRegioes(k, B.muns).map((n) => ({ v: `${k}:${n}`, nome: n, grupo: REGIOES[k] })),
+        ),
+        ...B.muns.map((m) => ({ v: `mun:${m.tse}`, nome: m.nome, grupo: "Município" })),
+      ].filter((i) => !escolhidos.includes(i.v));
+      return (
+        <Campo rotulo={escolhidos.length ? `Recortes (${escolhidos.length})` : "Recortes: Bahia inteira"} largo>
+          <BuscaItem
+            itens={itens}
+            rotulo="Adicionar recorte"
+            placeholder="Adicione território, região ou município"
+            busca={(i) => slugBusca(`${i.nome} ${i.grupo}`)}
+            onEscolher={(i) => salvar([...escolhidos, i.v])}
+            render={(i) => (
+              <>
+                <b>{i.nome}</b> <span className="text-muted-foreground">· {i.grupo}</span>
+              </>
+            )}
+          />
+          {escolhidos.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {escolhidos.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => salvar(escolhidos.filter((x) => x !== p))}
+                  className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold hover:bg-card"
+                  aria-label={`Remover ${recorteNome(p, B)}`}
+                >
+                  {recorteNome(p, B)} ×
+                </button>
+              ))}
+              <button type="button" onClick={() => salvar([])} className="px-2 py-1 text-xs text-primary underline">
+                Bahia inteira
+              </button>
+            </div>
           )}
         </Campo>
       );
