@@ -1438,8 +1438,8 @@ add({
       {
         tipo: "numeros",
         itens: [
-          { rotulo: `Onde ${a.c.nome} mais cresceu`, valor: melhor.nome, sub: sinalPP(melhor.pp) },
-          { rotulo: `Onde ${a.c.nome} menos cresceu`, valor: pior.nome, sub: sinalPP(pior.pp) },
+          { rotulo: `Onde ${a.c.nome} mais cresceu`, valor: sinalPP(melhor.pp), sub: melhor.nome },
+          { rotulo: `Onde ${a.c.nome} menos cresceu`, valor: sinalPP(pior.pp), sub: pior.nome },
           { rotulo: "Agrupamento", valor: REGIOES[chave].split(" (")[0]!, sub: `${nf(linhas.length)} grupos` },
         ],
       },
