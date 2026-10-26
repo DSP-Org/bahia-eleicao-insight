@@ -17,6 +17,7 @@ import {
   razao,
   recorteNome,
   recorteSet,
+  somaRecorte,
   statsRecorte,
   textoSituacao,
   tipoSituacao,
@@ -49,6 +50,7 @@ export type Estado = {
   med?: string; // votos | pct
   loc?: string; // código TSE de município com dados por urna
   agl?: string; // com, local ou secao
+  escopos?: string; // vários recortes separados por "|"; vazio = Bahia inteira
   fin?: string; // número do finalista do 2º turno; vazio = os dois
 };
 export type Controle =
@@ -71,7 +73,8 @@ export type Controle =
   | "med"
   | "loc"
   | "agl"
-  | "fin";
+  | "fin"
+  | "escopos";
 
 export type Relatorio = {
   id: string;
@@ -1260,12 +1263,25 @@ const vencedorMun = (d: DadosCargo, mi: number) => {
   return best;
 };
 
+// Vários recortes (território, região ou município) unidos num só conjunto de municípios.
+export const partesEscopo = (s?: string) => (s ?? "").split("|").filter((x) => x && x !== "ba");
+function setMulti(B: Base, partes: string[]): Set<number> | null {
+  if (!partes.length) return null;
+  const out = new Set<number>();
+  for (const pt of partes) for (const mi of recorteSet(pt, B) ?? []) out.add(mi);
+  return out;
+}
+function nomeMulti(B: Base, partes: string[]): string {
+  if (!partes.length) return "Bahia inteira";
+  return partes.length <= 3 ? partes.map((pt) => recorteNome(pt, B).split(" (")[0]).join(" + ") : `${partes.length} recortes`;
+}
+
 add({
   id: "turnos-evolucao",
   grupo: "2º turno · Presidente",
   titulo: "Evolução do 1º para o 2º turno",
   desc: "Votos e percentual dos dois finalistas em cada município nos dois turnos, com ganho de votos e variação em pontos percentuais.",
-  controles: ["fin", "escopo"],
+  controles: ["fin", "escopos"],
   padrao: { escopo: "ba" },
   gerar(B, st) {
     const { t1, t2, lista: ambos } = finalistas(B);
@@ -1273,7 +1289,9 @@ add({
     if (!a || !b) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
     const unico = ambos.find((x) => String(x.c.n) === st.fin);
     const lista = unico ? [unico] : ambos;
-    const set = recorteSet(st.escopo, B);
+    const partes = partesEscopo(st.escopos);
+    const set = setMulti(B, partes);
+    const nomeRec = nomeMulti(B, partes);
     const m = lista.map((x) => ({ m1: mapaVotos(t1.votos[x.i1] ?? []), m2: mapaVotos(t2.votos[x.i2] ?? []) }));
     const s1 = statsRecorte(t1, set);
     const s2 = statsRecorte(t2, set);
@@ -1313,8 +1331,8 @@ add({
       },
       {
         tipo: "tabela",
-        titulo: `Evolução entre turnos${unico ? ` · ${unico.c.nome}` : ""} · ${recorteNome(st.escopo, B)}`,
-        arquivo: arquivo("evolucao-turnos", unico?.c.nome, recorteNome(st.escopo, B)),
+        titulo: `Evolução entre turnos${unico ? ` · ${unico.c.nome}` : ""} · ${nomeRec}`,
+        arquivo: arquivo("evolucao-turnos", unico?.c.nome, nomeRec),
         busca: true,
         ordem: [4, true],
         pagina: 40,
@@ -1330,6 +1348,40 @@ add({
           ]),
         ],
       },
+      ...(partes.length > 1
+        ? [
+            {
+              tipo: "tabela" as const,
+              titulo: "Comparação entre os recortes",
+              arquivo: arquivo("evolucao-turnos-recortes", unico?.c.nome),
+              ordem: [0, false] as [number, boolean],
+              linhas: partes.map((pt): Celula[] => {
+                const ss = recorteSet(pt, B);
+                const a1 = statsRecorte(t1, ss)[E.vv] ?? 0;
+                const a2 = statsRecorte(t2, ss)[E.vv] ?? 0;
+                return [
+                  recorteNome(pt, B),
+                  munsDoRecorte(B, ss).length,
+                  ...lista.flatMap((x) => {
+                    const v1 = somaRecorte(t1.votos[x.i1] ?? [], ss);
+                    const v2 = somaRecorte(t2.votos[x.i2] ?? [], ss);
+                    return [v1, v2, v2 - v1, razao(v2, a2) - razao(v1, a1)];
+                  }),
+                ];
+              }),
+              colunas: [
+                col("Recorte", "texto"),
+                col("Municípios", "int"),
+                ...lista.flatMap((x) => [
+                  col(`${x.c.nome} · 1º t.`, "int"),
+                  col(`${x.c.nome} · 2º t.`, "int"),
+                  col(`Ganho · ${x.c.nome}`, "int"),
+                  col(`Var. % · ${x.c.nome}`, "pct", { casas: 2, barra: true }),
+                ]),
+              ],
+            },
+          ]
+        : []),
       { tipo: "nota", texto: "Var. % é a diferença em pontos percentuais da participação nos votos válidos de cada turno. Os votos dos candidatos eliminados não podem ser rastreados individualmente: o ganho mostra só o saldo de cada finalista." },
     ];
   },
