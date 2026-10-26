@@ -49,6 +49,7 @@ export type Estado = {
   med?: string; // votos | pct
   loc?: string; // código TSE de município com dados por urna
   agl?: string; // com, local ou secao
+  fin?: string; // número do finalista do 2º turno; vazio = os dois
 };
 export type Controle =
   | "cargo"
@@ -69,7 +70,8 @@ export type Controle =
   | "cands"
   | "med"
   | "loc"
-  | "agl";
+  | "agl"
+  | "fin";
 
 export type Relatorio = {
   id: string;
@@ -1241,7 +1243,7 @@ add({
 
 // ------------------------------------------------------------------ 2º turno (Presidente)
 // Os finalistas são casados entre os turnos pelo número do candidato; o percentual usa os válidos de cada turno.
-function finalistas(B: Base) {
+export function finalistas(B: Base) {
   const t1 = B.cargos.presidente;
   const t2 = B.cargos["presidente-2t"];
   const lista = t2.cargo.candidatos
@@ -1263,12 +1265,14 @@ add({
   grupo: "2º turno · Presidente",
   titulo: "Evolução do 1º para o 2º turno",
   desc: "Votos e percentual dos dois finalistas em cada município nos dois turnos, com ganho de votos e variação em pontos percentuais.",
-  controles: ["escopo"],
+  controles: ["fin", "escopo"],
   padrao: { escopo: "ba" },
   gerar(B, st) {
-    const { t1, t2, lista } = finalistas(B);
-    const [a, b] = lista;
+    const { t1, t2, lista: ambos } = finalistas(B);
+    const [a, b] = ambos;
     if (!a || !b) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
+    const unico = ambos.find((x) => String(x.c.n) === st.fin);
+    const lista = unico ? [unico] : ambos;
     const set = recorteSet(st.escopo, B);
     const m = lista.map((x) => ({ m1: mapaVotos(t1.votos[x.i1] ?? []), m2: mapaVotos(t2.votos[x.i2] ?? []) }));
     const s1 = statsRecorte(t1, set);
@@ -1285,7 +1289,7 @@ add({
         tot[k]!.v2 += v2;
         return [v1, v2, v2 - v1, razao(v2, vv2) - razao(v1, vv1)];
       });
-      const ga = (cel[2] as number) - (cel[6] as number);
+      const ga = unico ? (cel[2] as number) : (cel[2] as number) - (cel[6] as number);
       if (ga > maiorGanho.g) maiorGanho = { mi, g: ga };
       return [vMun(B, mi), B.muns[mi]?.ti ?? "", ...cel];
     });
@@ -1302,13 +1306,15 @@ add({
           ];
         }).concat([
           { rotulo: "Comparecimento", valor: nf(s2[E.co] ?? 0), sub: `1º turno: ${nf(s1[E.co] ?? 0)} (${(s2[E.co] ?? 0) - (s1[E.co] ?? 0) >= 0 ? "+" : ""}${nf((s2[E.co] ?? 0) - (s1[E.co] ?? 0))})` },
-          { rotulo: `Maior saldo de ${a.c.nome}`, valor: nomeMG, sub: "ganho dele menos o ganho do adversário" },
+          unico
+            ? { rotulo: `Maior ganho de ${unico.c.nome}`, valor: nomeMG, sub: `${sinal(maiorGanho.g)} votos do 1º para o 2º turno` }
+            : { rotulo: `Maior saldo de ${a.c.nome}`, valor: nomeMG, sub: "ganho dele menos o ganho do adversário" },
         ]),
       },
       {
         tipo: "tabela",
-        titulo: `Evolução entre turnos · ${recorteNome(st.escopo, B)}`,
-        arquivo: arquivo("evolucao-turnos", recorteNome(st.escopo, B)),
+        titulo: `Evolução entre turnos${unico ? ` · ${unico.c.nome}` : ""} · ${recorteNome(st.escopo, B)}`,
+        arquivo: arquivo("evolucao-turnos", unico?.c.nome, recorteNome(st.escopo, B)),
         busca: true,
         ordem: [4, true],
         pagina: 40,

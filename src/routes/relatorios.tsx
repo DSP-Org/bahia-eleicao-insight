@@ -22,6 +22,7 @@ import {
 import {
   RELATORIOS,
   baixarDados,
+  finalistas,
   candidatoPadrao,
   municipioPadrao,
   opcoesPartido,
@@ -51,6 +52,7 @@ const CHAVES = [
   "med",
   "loc",
   "agl",
+  "fin",
 ] as const;
 
 export const Route = createFileRoute("/relatorios")({
@@ -506,6 +508,21 @@ function Controle({
             {ags.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.nome} ({a.vagas} vaga{a.vagas === 1 ? "" : "s"})
+              </option>
+            ))}
+          </Select>
+        </Campo>
+      );
+    }
+    case "fin": {
+      const fs = finalistas(B).lista;
+      return (
+        <Campo rotulo="Candidato">
+          <Select value={st.fin ?? ""} onChange={(v) => definir("fin", v)}>
+            <option value="">Os dois finalistas</option>
+            {fs.map((x) => (
+              <option key={x.c.n} value={String(x.c.n)}>
+                Só {x.c.nome}
               </option>
             ))}
           </Select>
