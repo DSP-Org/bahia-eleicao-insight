@@ -1,4 +1,5 @@
 # Tasks
+- [ ] Simplify Evolução por território into focused candidate and turnout tables, preserving both reports and selected cuts; verify screen, CSV and PDF.
 - [x] Add both-finalists / Lula-only / Flávio-only selection to territory evolution and verify filtered comparisons.
 - [x] Create a Comparativo report group with useful candidate, territory, and office comparison models.
 - [x] Verify the new comparison reports on desktop, mobile, CSV, and PDF.
