@@ -1487,7 +1487,7 @@ add({
     const rotulo = REGIOES[chave].split(" (")[0] ?? REGIOES[chave];
     const contexto = nomeMulti(B, partes);
     const blocos: Bloco[] = [{ tipo: "numeros", itens: [
-      { rotulo: "Agrupamento", valor: rotulo, sub: `${nf(grupos.length)} grupos · ${nf(grupos.reduce((n, [, o]) => n + o.n, 0))} municípios` },
+      { rotulo: `Grupos · ${chave === "ti" ? "Territórios" : "Regiões"}`, valor: nf(grupos.length), sub: `${nf(grupos.reduce((n, [, o]) => n + o.n, 0))} municípios` },
       ...lista.map((x) => {
         const k = ambos.indexOf(x);
         const ganho = grupos.reduce((n, [, o]) => n + (o.v2[k] ?? 0) - (o.v1[k] ?? 0), 0);
