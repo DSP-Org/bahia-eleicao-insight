@@ -1239,6 +1239,150 @@ add({
   },
 });
 
+// ------------------------------------------------------------------ 2º turno (Presidente)
+// Os finalistas são casados entre os turnos pelo número do candidato; o percentual usa os válidos de cada turno.
+function finalistas(B: Base) {
+  const t1 = B.cargos.presidente;
+  const t2 = B.cargos["presidente-2t"];
+  const lista = t2.cargo.candidatos
+    .map((c, i2) => ({ c, i2, i1: t1.cargo.candidatos.findIndex((x) => x.n === c.n) }))
+    .filter((x) => x.i1 >= 0)
+    .slice(0, 2);
+  return { t1, t2, lista };
+}
+const vencedorMun = (d: DadosCargo, mi: number) => {
+  let best = -1, bv = -1;
+  d.votos.forEach((flat, ci) => {
+    for (let k = 0; k < flat.length; k += 2) if (flat[k] === mi && (flat[k + 1] ?? 0) > bv) { bv = flat[k + 1] ?? 0; best = ci; }
+  });
+  return best;
+};
+
+add({
+  id: "turnos-evolucao",
+  grupo: "2º turno · Presidente",
+  titulo: "Evolução do 1º para o 2º turno",
+  desc: "Votos e percentual dos dois finalistas em cada município nos dois turnos, com ganho de votos e variação em pontos percentuais.",
+  controles: ["escopo"],
+  padrao: { escopo: "ba" },
+  gerar(B, st) {
+    const { t1, t2, lista } = finalistas(B);
+    const [a, b] = lista;
+    if (!a || !b) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
+    const set = recorteSet(st.escopo, B);
+    const m = lista.map((x) => ({ m1: mapaVotos(t1.votos[x.i1] ?? []), m2: mapaVotos(t2.votos[x.i2] ?? []) }));
+    const s1 = statsRecorte(t1, set);
+    const s2 = statsRecorte(t2, set);
+    const tot = lista.map(() => ({ v1: 0, v2: 0 }));
+    let maiorGanho = { mi: -1, g: -Infinity };
+    const linhas: Celula[][] = munsDoRecorte(B, set).map((mi) => {
+      const vv1 = t1.stats[mi]?.[E.vv] ?? 0;
+      const vv2 = t2.stats[mi]?.[E.vv] ?? 0;
+      const cel = lista.flatMap((_, k) => {
+        const v1 = m[k]?.m1.get(mi) ?? 0;
+        const v2 = m[k]?.m2.get(mi) ?? 0;
+        tot[k]!.v1 += v1;
+        tot[k]!.v2 += v2;
+        return [v1, v2, v2 - v1, razao(v2, vv2) - razao(v1, vv1)];
+      });
+      const ga = (cel[2] as number) - (cel[6] as number);
+      if (ga > maiorGanho.g) maiorGanho = { mi, g: ga };
+      return [vMun(B, mi), B.muns[mi]?.ti ?? "", ...cel];
+    });
+    const nomeMG = maiorGanho.mi >= 0 ? (B.muns[maiorGanho.mi]?.nome ?? "") : "";
+    return [
+      {
+        tipo: "numeros",
+        itens: lista.flatMap((x, k) => {
+          const p1 = razao(tot[k]!.v1, s1[E.vv] ?? 0);
+          const p2 = razao(tot[k]!.v2, s2[E.vv] ?? 0);
+          return [
+            { rotulo: `${x.c.nome} · 2º turno`, valor: nf(tot[k]!.v2), sub: `${fmtPct(p2, 2)} · 1º turno: ${nf(tot[k]!.v1)} (${fmtPct(p1, 2)})` },
+            { rotulo: `${x.c.nome} · ganho`, valor: `${tot[k]!.v2 - tot[k]!.v1 >= 0 ? "+" : ""}${nf(tot[k]!.v2 - tot[k]!.v1)}`, sub: `${p2 - p1 >= 0 ? "+" : ""}${(p2 - p1).toLocaleString("pt-BR", { maximumFractionDigits: 2 })} p.p.` },
+          ];
+        }).concat([
+          { rotulo: "Comparecimento", valor: nf(s2[E.co] ?? 0), sub: `1º turno: ${nf(s1[E.co] ?? 0)} (${(s2[E.co] ?? 0) - (s1[E.co] ?? 0) >= 0 ? "+" : ""}${nf((s2[E.co] ?? 0) - (s1[E.co] ?? 0))})` },
+          { rotulo: `Maior saldo de ${a.c.nome}`, valor: nomeMG, sub: "ganho dele menos o ganho do adversário" },
+        ]),
+      },
+      {
+        tipo: "tabela",
+        titulo: `Evolução entre turnos · ${recorteNome(st.escopo, B)}`,
+        arquivo: arquivo("evolucao-turnos", recorteNome(st.escopo, B)),
+        busca: true,
+        ordem: [4, true],
+        pagina: 40,
+        linhas,
+        colunas: [
+          col("Município", "mun"),
+          col("Território", "texto"),
+          ...lista.flatMap((x) => [
+            col(`${x.c.nome} · 1º t.`, "int"),
+            col(`${x.c.nome} · 2º t.`, "int"),
+            col(`Ganho · ${x.c.nome}`, "int"),
+            col(`Var. % · ${x.c.nome}`, "pct", { casas: 2, barra: true }),
+          ]),
+        ],
+      },
+      { tipo: "nota", texto: "Var. % é a diferença em pontos percentuais da participação nos votos válidos de cada turno. Os votos dos candidatos eliminados não podem ser rastreados individualmente: o ganho mostra só o saldo de cada finalista." },
+    ];
+  },
+});
+
+add({
+  id: "turnos-viradas",
+  grupo: "2º turno · Presidente",
+  titulo: "Viradas e vencedores por turno",
+  desc: "Quem venceu cada município no 1º e no 2º turno, destacando as cidades que mudaram de vencedor.",
+  controles: ["escopo"],
+  padrao: { escopo: "ba" },
+  gerar(B, st) {
+    const { t1, t2, lista } = finalistas(B);
+    if (lista.length < 2) return [{ tipo: "aviso", texto: "Dados do 2º turno indisponíveis." }];
+    const set = recorteSet(st.escopo, B);
+    const cont = new Map<string, number>();
+    let viradas = 0;
+    const linhas: Celula[][] = munsDoRecorte(B, set).map((mi) => {
+      const w1 = t1.cargo.candidatos[vencedorMun(t1, mi)];
+      const w2 = t2.cargo.candidatos[vencedorMun(t2, mi)];
+      const mudou = !!w1 && !!w2 && w1.n !== w2.n;
+      if (mudou) viradas++;
+      if (w2) cont.set(w2.nome, (cont.get(w2.nome) ?? 0) + 1);
+      const s = t2.stats[mi] ?? [];
+      const va = mapaVotos(t2.votos[lista[0]!.i2] ?? []).get(mi) ?? 0;
+      const vb = mapaVotos(t2.votos[lista[1]!.i2] ?? []).get(mi) ?? 0;
+      return [vMun(B, mi), B.muns[mi]?.ti ?? "", w1?.nome ?? "", w2?.nome ?? "", mudou ? "Virou" : "Manteve", razao(Math.abs(va - vb), s[E.vv] ?? 0)];
+    });
+    return [
+      {
+        tipo: "numeros",
+        itens: [
+          ...lista.map((x) => ({ rotulo: `${x.c.nome} venceu`, valor: `${nf(cont.get(x.c.nome) ?? 0)} cidades`, sub: "no 2º turno" })),
+          { rotulo: "Cidades que mudaram de vencedor", valor: nf(viradas), sub: "do 1º para o 2º turno" },
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `Vencedor por turno · ${recorteNome(st.escopo, B)}`,
+        arquivo: arquivo("viradas-turnos", recorteNome(st.escopo, B)),
+        busca: true,
+        ordem: [5, false],
+        pagina: 40,
+        linhas,
+        colunas: [
+          col("Município", "mun"),
+          col("Território", "texto"),
+          col("Vencedor 1º turno", "texto"),
+          col("Vencedor 2º turno", "texto"),
+          col("Situação", "texto"),
+          col("Margem no 2º turno", "pct", { casas: 2 }),
+        ],
+      },
+      { tipo: "nota", texto: "No 1º turno o vencedor pode ser um candidato que não foi ao 2º turno; nesse caso a cidade aparece como \"Virou\"." },
+    ];
+  },
+});
+
 add({
   id: "partido-casas",
   grupo: "COMPARATIVO",
