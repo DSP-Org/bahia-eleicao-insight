@@ -51,6 +51,7 @@ function Comparar() {
   const { data: meta } = useMeta();
   const { data: muns } = useMunicipios();
   const presidente = useMunData("presidente");
+  const presidente2t = useMunData("presidente-2t");
   const governador = useMunData("governador");
   const senador = useMunData("senador");
   const federal = useMunData("deputado-federal");
@@ -59,6 +60,7 @@ function Comparar() {
 
   const dadosPorCargo: Record<string, MunData | undefined> = {
     presidente: presidente.data,
+    "presidente-2t": presidente2t.data,
     governador: governador.data,
     senador: senador.data,
     "deputado-federal": federal.data,
@@ -107,7 +109,7 @@ function Comparar() {
       resultados.forEach((r, k) => { if (r.percentual > resultados[vencedorRelativo].percentual) vencedorRelativo = k; });
       return { m, resultados, vencedorRelativo };
     });
-  }, [candidatosDiferentes, muns, presidente.data, governador.data, senador.data, federal.data, estadual.data]);
+  }, [candidatosDiferentes, muns, presidente.data, presidente2t.data, governador.data, senador.data, federal.data, estadual.data]);
 
   if (!meta || !cargo) return <Loading />;
 
