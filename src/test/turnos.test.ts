@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { criarEvolucaoTurnos } from "@/lib/indicadores";
-import { RELATORIOS, partesEscopo, recorteNome } from "@/lib/relatorios/definicoes";
-import { montarBase } from "@/lib/relatorios/base";
+import { RELATORIOS, partesEscopo } from "@/lib/relatorios/definicoes";
+import { montarBase, recorteNome } from "@/lib/relatorios/base";
 import type { BlocoTabela } from "@/lib/relatorios/blocos";
 import meta from "../../public/data/meta.json";
 import municipios from "../../public/data/municipios.json";
