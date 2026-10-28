@@ -13,6 +13,7 @@ import {
   REGIOES,
   SLUGS,
   montarBase,
+  nomesCompactos,
   nomesRegioes,
   recorteNome,
   ehSlug,
