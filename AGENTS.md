@@ -24,3 +24,4 @@
 - Urna/local-de-votação data is a separate static snapshot (public/data/secoes.json from scripts/gerar-secoes.py over TSE votacao_secao CSV) for a fixed list of municipalities, loaded optionally into the reports base; keeps existing reports independent of it and the file small.
 - Second-round Presidente is a separate cargo slug `presidente-2t` (scripts/gerar-2turno.mjs) with candidate ids suffixed `-2t`, because TSE reuses candidate codes across rounds and first-round data must stay untouched.
 - Territory evolution uses separate standard table blocks for each candidate's votes and valid-vote shares, followed by turnout and abstention; this keeps exports aligned with the screen and prevents mixing denominators in a wide table.
+- Dossiê 2 unions selected territory scopes with explicit municipalities and honors legacy single-territory links; using one deduplicated set keeps screen and exports consistent without changing other reports.

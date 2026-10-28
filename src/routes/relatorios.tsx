@@ -6,6 +6,7 @@ import { useMeta, useMunicipios, nf, type MunData } from "@/lib/eleicoes";
 import { PageHead, Loading, Select, Btn } from "@/components/ui-bits";
 import { Blocos } from "@/components/relatorios/Blocos";
 import { BuscaItem } from "@/components/relatorios/BuscaItem";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   NOME_CURTO,
   PROPORCIONAIS,
@@ -168,6 +169,7 @@ function Relatorios() {
           delete n.agr;
         }
         if (k === "cand") delete n.cargob;
+        if (k === "escopos" && rel.id === "dossie2") delete n.escopo;
         return n;
       },
       replace: true,
@@ -194,6 +196,9 @@ function Relatorios() {
       rel.controles.includes("escopos")
         ? partesEscopo(ef.escopos).map((p) => recorteNome(p, B)).join(" + ") || "Bahia inteira"
         : "",
+      rel.controles.includes("territorios")
+        ? partesEscopo(ef.escopos ?? (ef.escopo?.startsWith("ti:") ? ef.escopo : "")).filter((p) => p.startsWith("ti:")).map((p) => recorteNome(p, B)).join(" + ")
+        : "",
       rel.controles.includes("cand") ? (B.candPorId.get(ef.cand ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("cand2") ? (B.candPorId.get(ef.cand2 ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("mun") ? (B.muns[B.porTse.get(ef.mun ?? "") ?? -1]?.nome ?? "") : "",
@@ -203,7 +208,7 @@ function Relatorios() {
       rel.controles.includes("muns")
         ? (() => {
             const n = (ef.muns ?? "").split(",").map((t) => B.muns[B.porTse.get(t) ?? -1]?.nome).filter(Boolean);
-            return !n.length ? "Bahia" : n.length <= 3 ? n.join(", ") : `${n.length} municípios`;
+            return !n.length ? (rel.controles.includes("territorios") ? "" : "Bahia") : n.length <= 3 ? n.join(", ") : `${n.length} municípios`;
           })()
         : "",
     ]
@@ -355,6 +360,34 @@ function Controle({
 }) {
   const slug = slugDe(st);
   switch (c) {
+    case "territorios": {
+      const escolhidos = partesEscopo(st.escopos ?? (st.escopo?.startsWith("ti:") ? st.escopo : "")).filter((p) => p.startsWith("ti:"));
+      const territorios = nomesRegioes("ti", B.muns);
+      return (
+        <div className="flex w-full min-w-0 flex-col gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">
+              {escolhidos.length ? `Territórios (${escolhidos.length})` : "Territórios: Bahia inteira"}
+            </span>
+            {escolhidos.length > 0 && <Btn onClick={() => definir("escopos", "")}>Desmarcar territórios</Btn>}
+          </div>
+          <div className="grid max-h-60 grid-cols-1 gap-x-4 gap-y-1 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
+            {territorios.map((nome) => {
+              const valor = `ti:${nome}`;
+              return (
+                <label key={valor} className="flex min-w-0 cursor-pointer items-center gap-2 py-2 text-sm">
+                  <Checkbox
+                    checked={escolhidos.includes(valor)}
+                    onCheckedChange={(marcado) => definir("escopos", (marcado === true ? [...escolhidos, valor] : escolhidos.filter((p) => p !== valor)).join("|"))}
+                  />
+                  <span className="min-w-0 break-words">{nome}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
     case "cargo":
     case "cargoprop":
       return (
@@ -679,7 +712,7 @@ function Controle({
       const escolhidos = (st.muns ?? "").split(",").filter((t) => B.porTse.has(t));
       const salvar = (l: string[]) => definir("muns", l.join(","));
       return (
-        <Campo rotulo={escolhidos.length ? `Municípios (${escolhidos.length})` : "Municípios: Bahia toda"} largo>
+        <Campo rotulo={st.r === "dossie2" && (st.escopos || st.escopo?.startsWith("ti:")) ? `Municípios adicionais (${escolhidos.length})` : escolhidos.length ? `Municípios (${escolhidos.length})` : "Municípios: Bahia toda"} largo>
           <BuscaItem
             itens={B.muns.map((m, i) => ({ m, i })).filter((x) => !escolhidos.includes(x.m.tse))}
             rotulo="Adicionar município"

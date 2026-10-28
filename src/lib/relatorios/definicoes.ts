@@ -74,6 +74,7 @@ export type Controle =
   | "loc"
   | "agl"
   | "fin"
+  | "territorios"
   | "escopos";
 
 export type Relatorio = {
@@ -708,18 +709,23 @@ add({
   id: "dossie2",
   grupo: "Candidatos",
   titulo: "Dossiê 2 — candidato por município",
-  desc: "Desempenho de um candidato só nas cidades escolhidas (uma ou várias) ou na Bahia toda.",
-  controles: ["cand", "muns"],
+  desc: "Desempenho de um candidato nos territórios e municípios escolhidos ou na Bahia toda.",
+  controles: ["cand", "territorios", "muns"],
   padrao: {},
   gerar(B, st) {
     const ref = B.candPorId.get(st.cand ?? "") ?? B.candPorId.get(candidatoPadrao(B));
     if (!ref) return [{ tipo: "aviso", texto: "Escolha um candidato." }];
     const { c, i, slug } = ref;
     const d = B.cargos[slug];
-    const set = st.muns ? recorteSet(`muns:${st.muns}`, B) : null;
+    const territorios = partesEscopo(st.escopos ?? (st.escopo?.startsWith("ti:") ? st.escopo : "")).filter((p) => p.startsWith("ti:"));
+    const municipios = st.muns ? recorteSet(`muns:${st.muns}`, B) : null;
+    const set = territorios.length ? new Set(territorios.flatMap((p) => [...(recorteSet(p, B) ?? [])])) : municipios;
+    if (territorios.length && municipios) for (const mi of municipios) set?.add(mi);
     const lista = munsDoRecorte(B, set && set.size ? set : null);
     const setUsado = set && set.size ? set : null;
-    const nomeRecorte = setUsado
+    const nomeRecorte = territorios.length
+      ? `${territorios.map((p) => recorteNome(p, B)).join(" + ")}${municipios?.size ? " + municípios selecionados" : ""} · ${lista.length} municípios`
+      : setUsado
       ? lista.length <= 3
         ? lista.map((mi) => B.muns[mi]?.nome).join(", ")
         : `${lista.length} municípios`
