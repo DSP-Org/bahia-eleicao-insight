@@ -373,7 +373,10 @@ function Controle({
             <span className="text-xs uppercase tracking-wider text-muted-foreground">
               {escolhidos.length ? `Territórios (${escolhidos.length})` : "Territórios: Bahia inteira"}
             </span>
-            {escolhidos.length > 0 && <Btn onClick={() => definir("escopos", "")}>Desmarcar territórios</Btn>}
+            <div className="flex flex-wrap items-center gap-2">
+              <Btn onClick={() => definir("escopos", territorios.map((n) => `ti:${n}`).join("|"))}>Marcar todas</Btn>
+              <Btn onClick={() => definir("escopos", "")}>Desmarcar todas</Btn>
+            </div>
           </div>
           <div className="grid max-h-60 grid-cols-1 gap-x-4 gap-y-1 overflow-y-auto sm:grid-cols-2 lg:grid-cols-3">
             {territorios.map((nome) => {
