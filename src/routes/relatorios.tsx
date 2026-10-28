@@ -13,6 +13,7 @@ import {
   REGIOES,
   SLUGS,
   montarBase,
+  nomesCompactos,
   nomesRegioes,
   recorteNome,
   ehSlug,
@@ -194,10 +195,13 @@ function Relatorios() {
         : "",
       rel.controles.includes("escopo") ? recorteNome(ef.escopo, B) : "",
       rel.controles.includes("escopos")
-        ? partesEscopo(ef.escopos).map((p) => recorteNome(p, B)).join(" + ") || "Bahia inteira"
+        ? nomesCompactos(B, partesEscopo(ef.escopos))
         : "",
       rel.controles.includes("territorios")
-        ? partesEscopo(ef.escopos ?? (ef.escopo?.startsWith("ti:") ? ef.escopo : "")).filter((p) => p.startsWith("ti:")).map((p) => recorteNome(p, B)).join(" + ")
+        ? (() => {
+            const partes = partesEscopo(ef.escopos ?? (ef.escopo?.startsWith("ti:") ? ef.escopo : "")).filter((p) => p.startsWith("ti:"));
+            return partes.length ? nomesCompactos(B, partes, "territórios") : "";
+          })()
         : "",
       rel.controles.includes("cand") ? (B.candPorId.get(ef.cand ?? "")?.c.nome ?? "") : "",
       rel.controles.includes("cand2") ? (B.candPorId.get(ef.cand2 ?? "")?.c.nome ?? "") : "",

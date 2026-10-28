@@ -10,6 +10,7 @@ import {
   ehRegiao,
   ehSlug,
   munsDoRecorte,
+  nomesCompactos,
   nomesRegioes,
   posicaoNoMunicipio,
   rankPorMunicipio,
@@ -724,7 +725,7 @@ add({
     const lista = munsDoRecorte(B, set && set.size ? set : null);
     const setUsado = set && set.size ? set : null;
     const nomeRecorte = territorios.length
-      ? `${territorios.map((p) => recorteNome(p, B)).join(" + ")}${municipios?.size ? " + municípios selecionados" : ""} · ${lista.length} municípios`
+      ? `${nomesCompactos(B, territorios, "territórios")}${municipios?.size ? " + municípios selecionados" : ""} · ${lista.length} municípios`
       : setUsado
       ? lista.length <= 3
         ? lista.map((mi) => B.muns[mi]?.nome).join(", ")
@@ -1279,7 +1280,7 @@ function setMulti(B: Base, partes: string[]): Set<number> | null {
 }
 function nomeMulti(B: Base, partes: string[]): string {
   if (!partes.length) return "Bahia inteira";
-  return partes.length <= 3 ? partes.map((pt) => recorteNome(pt, B).split(" (")[0]).join(" + ") : `${partes.length} recortes`;
+  return partes.length <= 1 ? partes.map((pt) => recorteNome(pt, B).split(" (")[0]).join(" + ") : `${partes.length} recortes`;
 }
 
 add({
