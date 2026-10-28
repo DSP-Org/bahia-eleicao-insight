@@ -1280,7 +1280,7 @@ function setMulti(B: Base, partes: string[]): Set<number> | null {
 }
 function nomeMulti(B: Base, partes: string[]): string {
   if (!partes.length) return "Bahia inteira";
-  return partes.length <= 3 ? partes.map((pt) => recorteNome(pt, B).split(" (")[0]).join(" + ") : `${partes.length} recortes`;
+  return partes.length <= 1 ? partes.map((pt) => recorteNome(pt, B).split(" (")[0]).join(" + ") : `${partes.length} recortes`;
 }
 
 add({

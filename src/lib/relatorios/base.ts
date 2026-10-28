@@ -247,11 +247,11 @@ export function recorteNome(escopo: string | undefined, B: Base): string {
 }
 
 // Lista de recortes compacta: nomes sem o sufixo "(Território de Identidade)" etc.;
-// com muitos selecionados, resume pela quantidade em vez de listar tudo.
+// com mais de um selecionado, resume pela quantidade em vez de listar tudo.
 export function nomesCompactos(B: Base, partes: string[], unidade = "recortes"): string {
   if (!partes.length) return "Bahia inteira";
   const nomes = partes.map((p) => recorteNome(p, B).split(" (")[0]);
-  return nomes.length <= 3 ? nomes.join(" + ") : `${nomes.length} ${unidade}`;
+  return nomes.length <= 1 ? nomes.join(" + ") : `${nomes.length} ${unidade}`;
 }
 
 export function nomesRegioes(chave: ChaveRegiao, muns: Municipio[]): string[] {
