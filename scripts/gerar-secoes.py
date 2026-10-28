@@ -19,9 +19,13 @@ out = {}
 if True:
     for row in linhas():
         tse = row["CD_MUNICIPIO"]
-        if tse not in MUNS or row["NR_TURNO"] != "1":
+        if tse not in MUNS:
             continue
         slug = CARGOS.get(row["CD_CARGO"])
+        if row["NR_TURNO"] == "2":
+            slug = "presidente-2t" if slug == "presidente" else None
+        elif row["NR_TURNO"] != "1":
+            continue
         if not slug:
             continue
         m = out.setdefault(tse, {"nome": row["NM_MUNICIPIO"], "locais": {}, "secoes": {}, "cargos": {}})
