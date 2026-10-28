@@ -2472,7 +2472,7 @@ add({
             col(`${curto(x)} saldo`, "int", { barra: true }),
             col(`${curto(x)} % 1º`, "pct", { casas: 1 }),
             col(`${curto(x)} % 2º`, "pct", { casas: 1 }),
-            col(`${curto(x)} p.p.`, "num", { casas: 2 }),
+            col(`${curto(x)} p.p.`, "corr"),
           ]),
           col("Válidos 1º", "int"),
           col("Válidos 2º", "int"),
