@@ -2424,14 +2424,14 @@ add({
     const { lista: ambos } = finalistas(B);
     const unico = ambos.find((x) => String(x.c.n) === st.fin);
     const lista = unico ? [unico] : ambos;
-    const agl = st.agl ?? "local";
+    const agl = st.agl ?? "com";
     const us = P1.unidades(agl).filter((u) => u.idx.length);
     const curto = (x: (typeof ambos)[number]) => rotuloCand(x.c);
     const linhas = us.map((u) => {
       const v1 = P1.soma(P1.vv, u.idx), v2 = P2.soma(P2.vv, u.idx);
       const cs = lista.flatMap((x) => {
         const a = P1.soma(P1.porSec.get(x.c.n), u.idx), b = P2.soma(P2.porSec.get(x.c.n), u.idx);
-        return [a, b, b - a, razao(a, v1), razao(b, v2), (razao(b, v2) - razao(a, v1)) * 100];
+        return [a, b, b - a, razao(a, v1), razao(b, v2), razao(b, v2) - razao(a, v1)];
       });
       return [u.nome, u.sub, ...cs, v1, v2] as (string | number)[];
     });
@@ -2451,7 +2451,7 @@ add({
         itens: [
           ...tot.flatMap((t) => [
             { rotulo: `${curto(t.x)} · saldo de votos`, valor: (t.b - t.a >= 0 ? "+" : "") + nf(t.b - t.a), sub: `${nf(t.a)} → ${nf(t.b)}` },
-            { rotulo: `${curto(t.x)} · % dos válidos`, valor: `${((t.pb - t.pa) * 100 >= 0 ? "+" : "")}${((t.pb - t.pa) * 100).toFixed(2).replace(".", ",")} p.p.`, sub: `${(t.pa * 100).toFixed(1).replace(".", ",")}% → ${(t.pb * 100).toFixed(1).replace(".", ",")}%` },
+            { rotulo: `${curto(t.x)} · % dos válidos`, valor: `${((t.pb - t.pa) >= 0 ? "+" : "")}${((t.pb - t.pa)).toFixed(2).replace(".", ",")} p.p.`, sub: `${t.pa.toFixed(1).replace(".", ",")}% → ${t.pb.toFixed(1).replace(".", ",")}%` },
           ]),
           { rotulo: `Viradas por ${nomeAgl}`, valor: nf(viradas), sub: `de ${nf(us.length)} em ${P1.nomeMun}` },
         ],
