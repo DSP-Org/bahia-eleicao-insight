@@ -20,4 +20,4 @@
 - [x] Relatórios 2º turno: Evolução 1º→2º e Viradas por turno (Presidente)
 - [ ] Urnas/locais do 2º turno quando o TSE publicar votacao_secao do 2º turno
 - [x] 2º turno: mapa de evolução, cartões 1º × 2º turno nos Indicadores, ligação entre turnos na página do candidato
-- [ ] Dossiê 2: resumo de territórios no subtítulo/kicker simplificado para contagem (feito no 1º passo, confirmar)
+- [x] Dossiê 2: subtítulo/kicker simplificado para contagem ("N territórios")
