@@ -16,8 +16,9 @@
 - [x] Verify indicator calculations, cargo/candidate filters and phone layouts.
 - [x] Widen the logo bar that holds the numeral 5 so the 5 fits, and refresh icons and the report logo.
 - [x] Make report PDFs choose portrait or landscape according to content width and visually verify representative exports.
-- [ ] Prefer portrait using measured table content and wrapped headers; verify all voting-place report PDFs and preserve existing reports.
+- [x] Prefer portrait using measured table content and wrapped headers; verify all voting-place report PDFs and preserve existing reports.
 - [x] Relatórios 2º turno: Evolução 1º→2º e Viradas por turno (Presidente)
 - [ ] Urnas/locais do 2º turno quando o TSE publicar votacao_secao do 2º turno
 - [x] 2º turno: mapa de evolução, cartões 1º × 2º turno nos Indicadores, ligação entre turnos na página do candidato
 - [x] Dossiê 2: subtítulo/kicker simplificado para contagem ("N territórios")
+- [x] Dossiê 2: botões "Marcar todas" e "Desmarcar todas" nos territórios
