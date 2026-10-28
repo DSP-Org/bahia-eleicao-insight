@@ -2410,6 +2410,79 @@ add({
 });
 
 add({
+  id: "urnas-turnos",
+  grupo: "Locais de votação",
+  titulo: "Presidente: 1º × 2º turno por local",
+  desc: "Votos e percentual dos dois finalistas em cada comunidade, local de votação ou urna nos dois turnos, com o crescimento entre eles.",
+  controles: ["loc", "fin", "agl"],
+  padrao: {},
+  gerar(B, st) {
+    const P1 = prepUrnas(B, st.loc, "presidente");
+    const P2 = prepUrnas(B, st.loc, "presidente-2t");
+    if ("erro" in P1) return [{ tipo: "aviso", texto: P1.erro as string }];
+    if ("erro" in P2) return [{ tipo: "aviso", texto: P2.erro as string }];
+    const { lista: ambos } = finalistas(B);
+    const unico = ambos.find((x) => String(x.c.n) === st.fin);
+    const lista = unico ? [unico] : ambos;
+    const agl = st.agl ?? "local";
+    const us = P1.unidades(agl).filter((u) => u.idx.length);
+    const curto = (x: (typeof ambos)[number]) => rotuloCand(x.c);
+    const linhas = us.map((u) => {
+      const v1 = P1.soma(P1.vv, u.idx), v2 = P2.soma(P2.vv, u.idx);
+      const cs = lista.flatMap((x) => {
+        const a = P1.soma(P1.porSec.get(x.c.n), u.idx), b = P2.soma(P2.porSec.get(x.c.n), u.idx);
+        return [a, b, b - a, razao(a, v1), razao(b, v2), (razao(b, v2) - razao(a, v1)) * 100];
+      });
+      return [u.nome, u.sub, ...cs, v1, v2] as (string | number)[];
+    });
+    const tot = lista.map((x) => {
+      const a = P1.soma(P1.porSec.get(x.c.n), P1.todas), b = P2.soma(P2.porSec.get(x.c.n), P2.todas);
+      return { x, a, b, pa: razao(a, P1.soma(P1.vv, P1.todas)), pb: razao(b, P2.soma(P2.vv, P2.todas)) };
+    });
+    const nomeAgl = (AGL_NOME[agl] ?? "Unidade").toLowerCase();
+    const viradas = us.filter((u) => {
+      const w = (P: typeof P1) => ambos.map((x) => P.soma(P.porSec.get(x.c.n), u.idx));
+      const [a1, b1] = w(P1) as [number, number], [a2, b2] = w(P2) as [number, number];
+      return Math.sign(a1 - b1) !== Math.sign(a2 - b2) && a1 !== b1 && a2 !== b2;
+    }).length;
+    return [
+      {
+        tipo: "numeros",
+        itens: [
+          ...tot.flatMap((t) => [
+            { rotulo: `${curto(t.x)} · saldo de votos`, valor: (t.b - t.a >= 0 ? "+" : "") + nf(t.b - t.a), sub: `${nf(t.a)} → ${nf(t.b)}` },
+            { rotulo: `${curto(t.x)} · % dos válidos`, valor: `${((t.pb - t.pa) * 100 >= 0 ? "+" : "")}${((t.pb - t.pa) * 100).toFixed(2).replace(".", ",")} p.p.`, sub: `${(t.pa * 100).toFixed(1).replace(".", ",")}% → ${(t.pb * 100).toFixed(1).replace(".", ",")}%` },
+          ]),
+          { rotulo: `Viradas por ${nomeAgl}`, valor: nf(viradas), sub: `de ${nf(us.length)} em ${P1.nomeMun}` },
+        ],
+      },
+      {
+        tipo: "tabela",
+        titulo: `1º × 2º turno por ${nomeAgl} · Presidente · ${P1.nomeMun}`,
+        arquivo: arquivo("turnos-urnas", unico ? curto(unico) : "finalistas", agl, P1.nomeMun),
+        busca: linhas.length > 10,
+        ordem: [4, true],
+        linhas,
+        colunas: [
+          col(AGL_NOME[agl] ?? "Unidade", "texto"),
+          col(agl === "com" ? "Zona" : agl === "local" ? "Comunidade" : "Local", "texto"),
+          ...lista.flatMap((x) => [
+            col(`${curto(x)} 1º`, "int"),
+            col(`${curto(x)} 2º`, "int"),
+            col(`${curto(x)} saldo`, "int", { barra: true }),
+            col(`${curto(x)} % 1º`, "pct", { casas: 1 }),
+            col(`${curto(x)} % 2º`, "pct", { casas: 1 }),
+            col(`${curto(x)} p.p.`, "num", { casas: 2 }),
+          ]),
+          col("Válidos 1º", "int"),
+          col("Válidos 2º", "int"),
+        ],
+      },
+    ];
+  },
+});
+
+add({
   id: "urnas-multi",
   grupo: "Locais de votação",
   titulo: "Vários candidatos por local",
